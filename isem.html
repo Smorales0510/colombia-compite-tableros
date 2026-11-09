@@ -1316,7 +1316,7 @@ function normName(s){return (s||'').toString().toUpperCase().normalize('NFD').re
 const datasetNorm={};DEPTS.forEach(d=>datasetNorm[normName(d.departamento.replace(', D.C.',''))]=d.departamento);
 function matchDept(pr){return pr&&pr._k||null;}
 async function loadGeo(){return GEO_EMB;}
-var SA_SHAPE={type:'Feature',properties:{NOMBRE_DPT:'ARCHIPIELAGO DE SAN ANDRES',_synthetic:true},geometry:{type:'Polygon',coordinates:[[
+var SA_SHAPE={type:'Feature',properties:{NOMBRE_DPT:'ARCHIPIELAGO DE SAN ANDRES',_k:'San Andrés',_synthetic:true},geometry:{type:'Polygon',coordinates:[[
  [-81.700,12.605],[-81.686,12.596],[-81.681,12.576],[-81.689,12.558],[-81.684,12.538],[-81.691,12.518],
  [-81.705,12.500],[-81.720,12.495],[-81.735,12.510],[-81.728,12.532],[-81.719,12.552],[-81.722,12.572],[-81.713,12.592],[-81.700,12.605]
 ]]}};
@@ -1346,7 +1346,7 @@ function saMainFeature(){
   }
   return SA_SHAPE;
 }
-function drawSAInset(svg,w,h,fillFn,clickFn,tipFn){
+function drawSAInset(svg,w,h,fillFn,clickFn,tipFn){if(!DEPTS.some(function(d){return /Andr/.test(d.departamento);}))return d3.select(null);
   var feat=saFeature()||SA_SHAPE;
   var shape=saMainFeature();
   var bw=122,bh=132,x=w-bw-8,y=8,pad=10,labelH=20,footH=12;
@@ -1364,7 +1364,7 @@ function drawSAInset(svg,w,h,fillFn,clickFn,tipFn){
   if(tipFn) pp.on('mousemove',function(e){tip.style.opacity=1;tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY+14)+'px';tip.innerHTML=tipFn('San Andrés');}).on('mouseout',function(){tip.style.opacity=0;});
   return pp;
 }
-function saInsetMarkup(fill,w,h){
+function saInsetMarkup(fill,w,h){if(!DEPTS.some(function(d){return /Andr/.test(d.departamento);}))return '';
   var shape=saMainFeature();
   var bw=90,bh=98,x=w-bw-5,y=5,pad=7,labelH=15,footH=9;
   var iw=bw-pad*2,ih=bh-labelH-footH-3;
@@ -1445,7 +1445,7 @@ function computeClusters(){if(CLUSTERS)return CLUSTERS;
   raw.sort((a,b)=>b.mIdc-a.mIdc);
   const clusterOf={},groups=raw.map((g,ci)=>{
     g.idx.forEach(i=>clusterOf[DEPTS[i].departamento]=ci);
-    // pilar más distintivo (mayor promedio del grupo vs nacional)
+    // pilar más distintivo (mayor promedio del grupo vs promedio nacional)
     let bestP=null,bd=-1e9;PILLARS.forEach(p=>{const gm=g.idx.reduce((a,i)=>a+DEPTS[i].pilares[p.key].p2025,0)/g.idx.length;const diff=gm-NATAVG[p.key];if(diff>bd){bd=diff;bestP=p.nombre;}});
     return {ci,depts:g.idx.map(i=>DEPTS[i].departamento).sort((a,b)=>byName[a].rank_2025-byName[b].rank_2025),meanIdc:g.mIdc,strength:bestP};
   });
@@ -1606,12 +1606,12 @@ document.getElementById('evMetric').onchange=evRender;document.getElementById('e
 function buildTrPick(){document.getElementById('trPick').innerHTML=DEPTS_AZ.map(d=>`<label class="${trPicked.includes(d.departamento)?'on':''}"><input type="checkbox" value="${d.departamento}" ${trPicked.includes(d.departamento)?'checked':''}>${d.departamento}</label>`).join('');
   document.querySelectorAll('#trPick input').forEach(c=>c.onchange=()=>{if(c.checked)trPicked.push(c.value);else trPicked=trPicked.filter(x=>x!==c.value);buildTrPick();trRender();});}
 function trRender(){const k=document.getElementById('trMetric').value||'idc';const many=trPicked.length>12;
-  const TRPAL=['#253440','#FF3333','#FAA300','#3780FA','#FA7E60','#5A8FFA','#CBAA81','#FAD60E','#4B5B66','#C5BFAA'];const ds=trPicked.map((dn,i)=>{const h=EX.historico.data[dn]&&EX.historico.data[dn][k]||{};return {label:dn,data:HYEARS.map(y=>h[y]==null?null:h[y]),borderColor:dkc(TRPAL[i%TRPAL.length]),backgroundColor:dkc(TRPAL[i%TRPAL.length]),borderWidth:many?1.4:2.4,pointRadius:many?0:3,spanGaps:true,tension:.2,clip:false};});
+  const TRPAL=['#253440','#FF3333','#FAA300','#3780FA','#FA7E60','#5A8FFA','#CBAA81','#FAD60E','#4B5B66','#C5BFAA'];const ds=trPicked.map((dn,i)=>{const h=EX.historico.data[dn]&&EX.historico.data[dn][k]||{};return {label:dn,data:HYEARS.map(y=>h[y]==null?null:h[y]),borderColor:dkc(TRPAL[i%TRPAL.length]),backgroundColor:dkc(TRPAL[i%TRPAL.length]),borderDash:LDASH[Math.floor(i/10)%3],borderWidth:many?1.4:2.4,pointRadius:many?0:3,spanGaps:true,tension:.2,clip:false};});
   const vals=[];ds.forEach(d=>d.data.forEach(v=>{if(v!=null)vals.push(v);}));
   let ymin=1,ymax=DEPTS.length;
   if(vals.length){ymin=Math.max(1,Math.min(...vals)-1);ymax=Math.min(DEPTS.length,Math.max(...vals)+1);if(ymax-ymin<3)ymax=Math.min(DEPTS.length,ymin+3);}
   const range=ymax-ymin,step=range<=8?1:range<=16?2:4;
-  const cfg={type:'line',data:{labels:HYEARS,datasets:ds},options:{responsive:true,maintainAspectRatio:false,scales:{y:{reverse:true,min:ymin,max:ymax,title:{display:true,text:'Posición ('+metricLabel(k)+')'},ticks:{stepSize:step,precision:0}}},plugins:{legend:{display:!many,position:'bottom',labels:{boxWidth:12,font:{size:11}}},tooltip:{callbacks:{label:it=>it.dataset.label+': '+(it.raw==null?'s/d':it.raw+'°')}}}}};
+  const cfg={type:'line',data:{labels:HYEARS,datasets:ds},options:{responsive:true,maintainAspectRatio:false,scales:{y:{reverse:true,min:ymin,max:ymax,title:{display:true,text:'Posición ('+metricLabel(k)+')'},ticks:{stepSize:step,precision:0}}},plugins:{legend:{display:!many,position:'bottom',labels:{boxWidth:30,usePointStyle:true,pointStyle:'line',font:{size:11},generateLabels:LEGGEN}},tooltip:{callbacks:{label:it=>it.dataset.label+': '+(it.raw==null?'s/d':it.raw+'°')}}}}};
   if(trChart)trChart.destroy();trChart=new Chart(document.getElementById('trCanvas'),cfg);}
 document.getElementById('trMetric').onchange=trRender;document.getElementById('trClear').onclick=()=>{trPicked=trPicked.slice(0,1);buildTrPick();trRender();};document.getElementById('trAll').onclick=()=>{trPicked=DEPTS.map(d=>d.departamento);buildTrPick();trRender();};
 /* ===== Carreras de ranking animadas (bar chart race) ===== */
@@ -1694,7 +1694,8 @@ async function drawCifrasMap(){const code=(document.getElementById('cfMetric')||
     .attr('fill',f=>{const dn=matchDept(f.properties);const v=dn?rawAt(dn,code,cfYear):null;return (sInfo&&v!=null)?sInfo.sc(v):'#DDE1E5';})
     .on('mousemove',(e,f)=>{const dn=matchDept(f.properties);if(!dn)return;const v=rawAt(dn,code,cfYear);tip.style.opacity=1;tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY+14)+'px';tip.innerHTML=`<b>${dn}</b><br>${metricLabel(code)} (${cfYear}): <b>${rawFmt(v)}${um(code)}</b>`;})
     .on('mouseout',()=>tip.style.opacity=0).on('click',(e,f)=>{const dn=matchDept(f.properties);if(dn)selectDept(dn);})
-    .classed('sel',function(){return this.getAttribute('data-dept')===SELECTED;});}
+    .classed('sel',function(){return this.getAttribute('data-dept')===SELECTED;});
+  drawSAInset(svg,w,hh,function(f){var dn=matchDept(f.properties);var v=dn?rawAt(dn,code,cfYear):null;return (sInfo&&v!=null)?sInfo.sc(v):'#DDE1E5';},selectDept,function(dn){var v=rawAt(dn,code,cfYear);return '<b>'+dn+'</b><br>'+metricLabel(code)+' ('+cfYear+'): <b>'+rawFmt(v)+um(code)+'</b>';});}
 function cfSetYear(idx){idx=Math.max(0,Math.min(HYEARS.length-1,idx));cfYear=HYEARS[idx];const s=document.getElementById('cfSlider');if(s)s.value=String(idx);const l=document.getElementById('cfYearLbl');if(l)l.textContent=cfYear;drawCifrasMap();}
 (function(){const m=document.getElementById('cfMetric');if(m)m.onchange=drawCifrasMap;
   if(typeof attachPlayer==='function')attachPlayer('cfSlider','cfPlay',cfSetYear);
@@ -2001,6 +2002,8 @@ function fichaValFor(dn,code,raw){if(raw){const di=((EX.indicadores||{}).dic||[]
 function fichaIndLabel(code){const sp0=(EX.subpilares||[]).find(x=>x.code===code);if(sp0)return 'Subpilar · '+sp0.nombre;if(code==='idc')return 'ISEM general';const p=PILLARS.find(x=>x.key===code);if(p)return p.nombre+' (pilar)';const di=(EX.indicadores.dic||[]).find(x=>x.code===code);return di?di.nombre:code;}
 let fichaIndChartInst=null;
 let fichaIndGridInst=[];
+const LDASH=[[],[8,4],[8,3,2,3]];
+const LEGGEN=ch=>Chart.defaults.plugins.legend.labels.generateLabels(ch).map(l=>{const d=((ch.data.datasets[l.datasetIndex])||{}).borderDash||[];l.text=(d.length?(d.length>2?'–·– ':'– – '):'—— ')+l.text;return l;});
 const SINGLE_YEAR=HYEARS.filter(y=>DEPTS.some(d=>d['idc_'+y]!=null)).length<=1;
 const isIndCode=c=>!!((EX.indicadores||{}).dic||[]).find(x=>x.code===c);
 (function(){const c=document.getElementById('fichaSerRaw');if(c&&SINGLE_YEAR){const l=c.closest('label');if(l)l.style.display='none';}})();
@@ -2013,8 +2016,8 @@ function drawFichaSeries(){const cv=document.getElementById('fichaIndChart');if(
   const box=cv.parentElement,grid=document.getElementById('fichaIndGrid'),mapw=document.getElementById('fichaMapWrap');
   const mk=(datasets,title)=>({type:SINGLE_YEAR?'bar':'line',data:(SINGLE_YEAR&&!rawMode)?{labels:HYEARS.slice(-1),datasets:datasets.map(d=>Object.assign({},d,{data:d.data.slice(-1)}))}:{labels:HYEARS,datasets},options:{responsive:true,maintainAspectRatio:false,
     scales:{y:rawMode?{title:{display:true,text:'Valor real',font:{size:11}}}:{min:0,suggestedMax:10,title:{display:true,text:'Puntaje (0–10)',font:{size:11}},ticks:{precision:0}},x:{ticks:{font:{size:11}}}},
-    plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}},title:{display:true,text:title+(rawMode?' · valores reales':'')},tooltip:{callbacks:{label:it=>it.dataset.label+': '+(it.raw==null?'sin dato':it.raw+' ('+it.label+')')}}}}});
-  const ln=(label,data,i,fill)=>({label,data,borderColor:PAL[i%PAL.length],backgroundColor:SINGLE_YEAR?PAL[i%PAL.length]:(fill?'rgba(37,52,64,.10)':'transparent'),fill:!!fill,borderWidth:2.2,pointRadius:3,tension:.25,spanGaps:true,clip:false});
+    plugins:{legend:{position:'bottom',labels:{boxWidth:SINGLE_YEAR?12:30,usePointStyle:!SINGLE_YEAR,pointStyle:'line',font:{size:11},generateLabels:SINGLE_YEAR?undefined:LEGGEN}},title:{display:true,text:title+(rawMode?' · valores reales':'')},tooltip:{callbacks:{label:it=>it.dataset.label+': '+(it.raw==null?'sin dato':it.raw+' ('+it.label+')')}}}}});
+  const ln=(label,data,i,fill)=>({label,data,borderColor:PAL[i%PAL.length],borderDash:LDASH[Math.floor(i/PAL.length)%3],backgroundColor:SINGLE_YEAR?PAL[i%PAL.length]:(fill?'rgba(37,52,64,.10)':'transparent'),fill:!!fill,borderWidth:2.2,pointRadius:3,tension:.25,spanGaps:true,clip:false});
   fichaIndGridInst.forEach(c=>c.destroy());fichaIndGridInst=[];if(fichaIndChartInst){fichaIndChartInst.destroy();fichaIndChartInst=null;}
   const first=fichaIndScope[0];let noteTxt;
   if(multiDept){
@@ -2049,7 +2052,8 @@ async function drawFichaMap(scope,code){const cont=document.getElementById('fich
     .attr('opacity',f=>scopeSet.has(matchDept(f.properties))?1:.45)
     .attr('stroke',f=>scopeSet.has(matchDept(f.properties))?dkc('#253440'):'#fff').attr('stroke-width',f=>scopeSet.has(matchDept(f.properties))?1.4:.5)
     .on('mousemove',(e,f)=>{const dn=matchDept(f.properties);if(!dn)return;const v=score(byName[dn],code,'2025');tip.style.opacity=1;tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY+14)+'px';tip.innerHTML='<b>'+dn+'</b><br>'+fichaIndLabel(code)+': '+fmt(v)+(scopeSet.has(dn)?'':'<br><i>(no seleccionado)</i>');})
-    .on('mouseout',()=>tip.style.opacity=0).on('click',(e,f)=>{const dn=matchDept(f.properties);if(dn)selectDept(dn);});}
+    .on('mouseout',()=>tip.style.opacity=0).on('click',(e,f)=>{const dn=matchDept(f.properties);if(dn)selectDept(dn);});
+  drawSAInset(svg,w,hh,function(f){var dn=matchDept(f.properties);if(!dn||!scopeSet.has(dn))return '#e6ecf5';var v=score(byName[dn],code,'2025');return v==null?'#DDE1E5':color(v);},selectDept,function(dn){var v=score(byName[dn],code,'2025');return '<b>'+dn+'</b><br>'+fichaIndLabel(code)+': '+fmt(v)+(scopeSet.has(dn)?'':'<br><i>(no seleccionado)</i>');});}
 let fichaIndScope=['idc'];let fichaEvoDepts=[DEPTS[0].departamento];
 function fichaChips(){const host=document.getElementById('fichaIndChips');if(!host)return;
   host.innerHTML=fichaIndScope.length?fichaIndScope.map((c,i)=>'<label class="on">'+fichaIndLabel(c).replace(' (pilar)','')+' <span data-x="'+i+'" style="cursor:pointer;font-weight:800;margin-left:3px">×</span></label>').join(''):'<span class="note">Elige indicadores en el selector</span>';
@@ -2195,7 +2199,7 @@ function deptIndicatorsHTML(dn){const yh=HYEARS.map(y=>`<th>${y}</th>`).join('')
     inds.forEach(di=>{const s=((EX.series||{})[dn]||{})[di.code]||[];const rw=((EX.raw||{})[dn]||{})[di.code]||[];
       const cells=HYEARS.map((y,i)=>{const sc=null,rv=rw[i];return `<td class="mono" style="background:${sc==null?'#fff':color(sc)};color:${sc==null?'#253440':inkOn(color(sc))}">${rv==null?'\u2013':rawFmt(rv)}</td>`;}).join('');
       rows+=`<tr><td class="l">${di.nombre} <span style="color:${di.inversa?'#FA7E60':'#0e7c66'};font-weight:700">${di.inversa?'\u2193':'\u2191'}</span></td>${cells}</tr>`;});});
-  return `<h3 style="font-size:12px;margin:14px 0 2px">Detalle por indicador \u00b7 valor real por a\u00f1o (2023 \u2192 2025)</h3><div class="muted" style="font-size:8.5px;margin-bottom:2px">Cifras reales (tasas, %, conteos). \u2191 directo (m\u00e1s es mejor) \u00b7 \u2193 inverso (menos es mejor).</div><table class="indtbl"><thead><tr><th class="l">Indicador (93 en total)</th>${yh}</tr></thead><tbody>${rows}</tbody></table>`;}
+  return `<h3 style="font-size:12px;margin:14px 0 2px">Detalle por indicador \u00b7 valor real por a\u00f1o (2023 \u2192 2025)</h3><div class="muted" style="font-size:8.5px;margin-bottom:2px">Cifras reales (tasas, %, conteos). \u2191 directo (m\u00e1s es mejor) \u00b7 \u2193 inverso (menos es mejor).</div><table class="indtbl"><thead><tr><th class="l">Indicador (58 en total)</th>${yh}</tr></thead><tbody>${rows}</tbody></table>`;}
 function deptSectionHTML(dn){const d=byName[dn],c=EX.context[dn]||{};
   const ranked=PILLARS.map(p=>({p,v:d.pilares[p.key].p2025,diff:d.pilares[p.key].p2025-NATAVG[p.key]}));
   const best=[...ranked].sort((a,b)=>b.diff-a.diff)[0],worst=[...ranked].sort((a,b)=>a.diff-b.diff)[0];
@@ -2206,7 +2210,7 @@ function deptSectionHTML(dn){const d=byName[dn],c=EX.context[dn]||{};
     <div class="c"><div class="l">PIB per cápita 2023</div><div class="v">$${c.pib_per_capita?(c.pib_per_capita/1e6).toLocaleString('es-CO',{maximumFractionDigits:1}):'–'} M</div></div>
     <div class="c"><div class="l">Ocupados 2023</div><div class="v">${intf(c.ocupados)}</div></div></div>`;
   const prow=PILLARS.map(p=>{const v=d.pilares[p.key].p2025,v0=d.pilares[p.key].p2024,r=d.pilares[p.key].r2025,diff=v-NATAVG[p.key];
-    return `<tr><td class="l">${p.nombre}</td><td class="mono">${fmt(v0)}</td><td class="mono" style="background:${color(v)};color:${inkOn(color(v))};font-weight:700">${fmt(v)}</td><td class="mono">${r}°</td><td class="mono" style="color:${diff>=0?'#253440':'#FF3333'}">${diff>=0?'+':''}${fmt(diff)}</td></tr>`;}).join('');
+    return `<tr><td class="l">${p.nombre}</td>${SINGLE_YEAR?'':`<td class="mono">${fmt(v0)}</td>`}<td class="mono" style="background:${color(v)};color:${inkOn(color(v))};font-weight:700">${fmt(v)}</td><td class="mono">${r}°</td><td class="mono" style="color:${diff>=0?'#253440':'#FF3333'}">${diff>=0?'+':''}${fmt(diff)}</td></tr>`;}).join('');
   const bps=BP.filter(b=>b.departamento===dn);
   const bphtml=bps.length?`<ul class="bp">${bps.map(b=>`<li><b>${b.titulo}</b> — ${b.pilares.map(p=>p.nombre).join(', ')}</li>`).join('')}</ul>`:'<div class="muted">Sin buenas prácticas registradas.</div>';
   return `<section class="dept">
@@ -2214,32 +2218,32 @@ function deptSectionHTML(dn){const d=byName[dn],c=EX.context[dn]||{};
       <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px">
         <h1>${dn}</h1><span class="chip" style="background:${color(d.idc_2025)};color:${inkOn(color(d.idc_2025))}">${fmt(d.idc_2025)}</span></div></div>
     ${ctx}
-    <div class="insight"><b>Lectura rápida.</b> ${dn} ocupa la posición ${d.rank_2025} de ${DEPTS.length} en el ISEM 2025 (${fmt(d.idc_2025)}/10) y ${dlt} frente a 2024 (${fmt(d.idc_2024)}). Mayor fortaleza relativa: <b>${best.p.nombre}</b> (${fmt(best.v)}, ${best.diff>=0?'+':''}${fmt(best.diff)} vs nacional). Mayor rezago: <b>${worst.p.nombre}</b> (${fmt(worst.v)}, ${fmt(worst.diff)} vs nacional).</div>
+    <div class="insight"><b>Lectura rápida.</b> ${dn} ocupa la posición ${d.rank_2025} de ${DEPTS.length} en el ISEM 2025 (${fmt(d.idc_2025)}/10)${SINGLE_YEAR?'':` y ${dlt} frente a 2024 (${fmt(d.idc_2024)})`}. Mayor fortaleza relativa: <b>${best.p.nombre}</b> (${fmt(best.v)}, ${best.diff>=0?'+':''}${fmt(best.diff)} vs promedio nacional). Mayor rezago: <b>${worst.p.nombre}</b> (${fmt(worst.v)}, ${worst.diff>=0?'+':''}${fmt(worst.diff)} vs promedio nacional).</div>
     <div class="grid2"><div><h3 style="font-size:12px;margin-bottom:4px">Perfil de pilares (vs promedio nacional)</h3><img class="chart" src="__RADAR__"></div>
       <div class="maprow" style="grid-template-columns:1fr;gap:8px"><div><h3 style="font-size:12px;margin-bottom:4px">Ubicación</h3>${miniMapSVG([dn])}</div></div></div>
     ${!SINGLE_YEAR&&EX.historico.data[dn]&&EX.historico.data[dn]['idc']?`<h3 style="font-size:12px;margin:10px 0 4px">Trayectoria del ranking (${HYEARS[0]}–${HYEARS[HYEARS.length-1]})</h3><img class="chart" src="__TRAJ__" style="max-height:200px">`:''}
     <h3 style="font-size:12px;margin:12px 0 2px">Los 8 pilares (puntaje 0–10)</h3>
-    <table><thead><tr><th class="l">Pilar</th><th>2024</th><th>2025</th><th>Pos.</th><th>vs nac.</th></tr></thead><tbody>${prow}</tbody></table>
+    <table><thead><tr><th class="l">Pilar</th>${SINGLE_YEAR?'':'<th>2024</th>'}<th>2025</th><th>Pos.</th><th>vs promedio nacional</th></tr></thead><tbody>${prow}</tbody></table>
     ${deptIndicatorsHTML(dn)}
     ${bps.length?`<h3 style="font-size:12px;margin:12px 0 2px">Buenas prácticas (${bps.length})</h3>${bphtml}`:''}
     <div class="foot">Índice Subnacional de Emprendimiento 2025 · Colombia Compite &amp; Universidad del Rosario · Puntajes 0–10; ISEM = promedio de 8 pilares.</div>
   </section>`;}
 function coverHTML(depts){const list=[...depts].sort((a,b)=>byName[a].rank_2025-byName[b].rank_2025);
-  const rows=list.map((dn,i)=>{const d=byName[dn];return `<tr><td class="mono">${d.rank_2025}°</td><td class="l">${dn}</td><td class="l muted">${d.region}</td><td class="mono" style="background:${color(d.idc_2025)};color:${inkOn(color(d.idc_2025))};font-weight:700">${fmt(d.idc_2025)}</td><td class="mono">${d.cambio_pos>0?'▲ +'+d.cambio_pos:d.cambio_pos<0?'▼ '+d.cambio_pos:'='}</td></tr>`;}).join('');
+  const rows=list.map((dn,i)=>{const d=byName[dn];return `<tr><td class="mono">${d.rank_2025}°</td><td class="l">${dn}</td><td class="l muted">${d.region}</td><td class="mono" style="background:${color(d.idc_2025)};color:${inkOn(color(d.idc_2025))};font-weight:700">${fmt(d.idc_2025)}</td>${HASPREV?`<td class="mono">${d.cambio_pos>0?'▲ +'+d.cambio_pos:d.cambio_pos<0?'▼ '+d.cambio_pos:'='}</td>`:''}</tr>`;}).join('');
   return `<section class="cover">
     <div class="rpt-head"><div class="kick">Reporte comparativo · ISEM 2025</div><h1>Ficha combinada de ${depts.length} ciudades</h1>
       <div class="muted" style="margin-top:4px">${list.join(' · ')}</div></div>
     <div class="grid2"><div><h3 style="font-size:12px;margin-bottom:4px">Perfil de pilares comparado</h3><img class="chart" src="__MRADAR__"></div>
       <div><h3 style="font-size:12px;margin-bottom:4px">ISEM 2025</h3><img class="chart" src="__MBAR__"></div></div>
     <div class="maprow"><div>${miniMapSVG(depts)}</div>
-      <table><thead><tr><th class="mono">Pos</th><th class="l">Ciudad</th><th class="l">Región</th><th>ISEM 26</th><th>Δ</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <table><thead><tr><th class="mono">Pos</th><th class="l">Ciudad</th><th class="l">Región</th><th>ISEM 25</th>${HASPREV?'<th>Δ</th>':''}</tr></thead><tbody>${rows}</tbody></table></div>
     <div class="foot">Generado desde el tablero ISEM 2025. Las páginas siguientes detallan cada ciudad.</div>
   </section>`;}
 function reportDoc(body,depts){const title=depts.length>1?`ISEM 2025 — ${depts.length} ciudades`:`ISEM 2025 — ${depts[0]}`;
   return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>${title}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>@page{size:A4;margin:14mm}*{box-sizing:border-box}
+  <style>@page{size:A4;margin:14mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   body{font-family:'TT Commons','TT Commons Pro','Figtree',system-ui,sans-serif;color:#253440;margin:0;font-size:11px;line-height:1.45}
   h1,h2,h3{font-family:'Figtree Semi Condensed',system-ui,sans-serif;margin:0}
   .cover,.dept{page-break-after:always}.dept:last-child{page-break-after:auto}
@@ -2393,6 +2397,24 @@ function enhanceUX(){
 buildTable();buildCmpPick();gbSync();buildIntro();buildFichaPick();
 setTab(initFromHash());
 enhanceUX();
+(function(){const NOSUB=true;const dic=EX.indicadores.dic||[],subs=EX.subpilares||[],NB='    ';
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const indOpt=d=>'<option value="'+d.code+'">'+NB+esc(d.code+' · '+d.nombre+(d.unidad?' ('+d.unidad+')':''))+'</option>';
+  function hier(o){let h=o.gen?'<option value="idc">'+esc(o.gen)+'</option>':'';
+    PILLARS.forEach((p,n)=>{h+='<optgroup label="'+esc('PILAR '+(n+1)+': '+p.nombre.toUpperCase())+'">';
+      if(o.pil)h+='<option value="'+p.key+'" style="font-weight:700">'+esc('Pilar completo · '+p.nombre)+'</option>';
+      const used=new Set();
+      subs.filter(s=>s.pilar===p.key).forEach(s=>{
+        if(o.sub&&!NOSUB)h+='<option value="'+s.code+'" style="font-weight:700">'+esc(s.code+' · '+s.nombre)+'</option>';
+        else if(o.ind&&(NOSUB?o.hdr:!o.sub))h+='<option disabled style="font-weight:700">'+esc(s.code+' · '+s.nombre)+'</option>';
+        if(o.ind)dic.filter(d=>d.code.indexOf(s.code+'-')===0).forEach(d=>{used.add(d.code);h+=indOpt(d);});});
+      if(o.ind)dic.filter(d=>d.pilar===p.key&&!used.has(d.code)).forEach(d=>{h+=indOpt(d);});
+      h+='</optgroup>';});
+    return h;}
+  [['cmpMetric',{gen:IDX_ACR+' general',pil:1,sub:1,ind:1}],['chMetric',{gen:IDX_ACR+' general',pil:1,sub:1,ind:1}],['trMetric',{gen:IDX_ACR+' general',pil:1,sub:1,ind:1}],
+   ['mapmetric',{gen:IDX_ACR+' general',pil:1,ind:1}],['fichaIndSel',{gen:IDX_ACR+' general',pil:1,sub:1,ind:1,hdr:1}],['cfMetric',{ind:1,hdr:1}]].forEach(([id,o])=>{
+    const el=document.getElementById(id);if(!el)return;const v=el.value;el.innerHTML=hier(o);if(v&&[...el.options].some(x=>x.value===v))el.value=v;});
+})();
 (function(){const bad=new Set([...(EX.indicadores.dic||[]).map(d=>d.code),...(EX.subpilares||[]).map(s=>s.code)]);
   const subs=new Set((EX.subpilares||[]).map(s=>s.code));
   document.querySelectorAll('select').forEach(s=>{if(/^cf/.test(s.id))return;const rm=/^ficha/.test(s.id)?subs:bad;[...s.options].forEach(o=>{if(rm.has(o.value))o.remove();});s.querySelectorAll('optgroup').forEach(g=>{if(!g.children.length)g.remove();});});})();
