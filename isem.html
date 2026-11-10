@@ -2003,7 +2003,7 @@ function fichaIndLabel(code){const sp0=(EX.subpilares||[]).find(x=>x.code===code
 let fichaIndChartInst=null;
 let fichaIndGridInst=[];
 const LDASH=[[],[8,4],[8,3,2,3]];
-const LEGGEN=ch=>Chart.defaults.plugins.legend.labels.generateLabels(ch).map(l=>{const d=((ch.data.datasets[l.datasetIndex])||{}).borderDash||[];l.text=(d.length?(d.length>2?'–·– ':'– – '):'—— ')+l.text;return l;});
+const LEGGEN=ch=>Chart.defaults.plugins.legend.labels.generateLabels(ch).map(l=>{const d=((ch.data.datasets[l.datasetIndex])||{}).borderDash||[];l.lineDash=d;return l;});
 const SINGLE_YEAR=HYEARS.filter(y=>DEPTS.some(d=>d['idc_'+y]!=null)).length<=1;
 const isIndCode=c=>!!((EX.indicadores||{}).dic||[]).find(x=>x.code===c);
 (function(){const c=document.getElementById('fichaSerRaw');if(c&&SINGLE_YEAR){const l=c.closest('label');if(l)l.style.display='none';}})();
