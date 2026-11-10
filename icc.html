@@ -863,8 +863,8 @@ body.print-current .twocol .card,body.print-current .card:has(.siderank){break-i
       </div>
       <div class="pick" id="fichaIndChips" style="margin-bottom:8px"></div>
       <div class="note" id="fichaSerNote" style="margin-bottom:10px"></div>
-      <div class="controls" style="margin-bottom:4px"><span class="note">Ciudades (marca varios para comparar y ver el mapa):</span>
-        <button class="btn" id="fichaEvoAll">Todos</button><button class="btn" id="fichaEvoOne">Solo el actual</button></div>
+      <div class="controls" style="margin-bottom:4px"><span class="note">Ciudades (máximo 5 para comparar y ver el mapa):</span>
+        </div>
       <div class="pick" id="fichaEvoDepts" style="margin-bottom:10px"></div>
       <div class="chartbox" style="height:360px"><canvas id="fichaIndChart"></canvas></div>
       <div id="fichaIndGrid" style="display:none"></div>
@@ -2059,14 +2059,14 @@ function fichaChips(){const host=document.getElementById('fichaIndChips');if(!ho
   host.querySelectorAll('[data-x]').forEach(x=>x.onclick=()=>{fichaIndScope.splice(+x.dataset.x,1);if(!fichaIndScope.length)fichaIndScope=['idc'];fichaChips();drawFichaSeries();});}
 function fichaDeptChips(){const host=document.getElementById('fichaEvoDepts');if(!host)return;
   host.innerHTML=DEPTS_AZ.map(d=>'<label class="'+(fichaEvoDepts.includes(d.departamento)?'on':'')+'"><input type="checkbox" '+(fichaEvoDepts.includes(d.departamento)?'checked':'')+' value="'+d.departamento+'">'+d.departamento+'</label>').join('');
-  host.querySelectorAll('input').forEach(c=>c.onchange=()=>{if(c.checked){if(!fichaEvoDepts.includes(c.value))fichaEvoDepts.push(c.value);}else fichaEvoDepts=fichaEvoDepts.filter(x=>x!==c.value);if(!fichaEvoDepts.length)fichaEvoDepts=[SELECTED];fichaDeptChips();drawFichaSeries();});}
+  if(fichaEvoDepts.length>5)fichaEvoDepts=fichaEvoDepts.slice(0,5);host.querySelectorAll('input').forEach(c=>{if(!c.checked&&fichaEvoDepts.length>=5){c.disabled=true;c.parentNode.style.opacity='.45';}});host.querySelectorAll('input').forEach(c=>c.onchange=()=>{if(c.checked&&fichaEvoDepts.length>=5){c.checked=false;return;}if(c.checked){if(!fichaEvoDepts.includes(c.value))fichaEvoDepts.push(c.value);}else fichaEvoDepts=fichaEvoDepts.filter(x=>x!==c.value);if(!fichaEvoDepts.length)fichaEvoDepts=[SELECTED];fichaDeptChips();drawFichaSeries();});}
 function fichaSeriesRefresh(){fichaEvoDepts=[SELECTED];fichaChips();fichaDeptChips();drawFichaSeries();}
 document.getElementById('fichaIndSel').onchange=function(){const v=this.value;if(v&&!fichaIndScope.includes(v))fichaIndScope.push(v);if(SINGLE_YEAR&&v){const k=isIndCode(v);fichaIndScope=fichaIndScope.filter(c=>isIndCode(c)===k);}fichaChips();drawFichaSeries();};
 document.getElementById('fichaIndAll').onclick=()=>{fichaIndScope=PILLARS.map(p=>p.key);fichaChips();drawFichaSeries();};
 var _fsr=document.getElementById('fichaSerRaw');if(_fsr)_fsr.onchange=drawFichaSeries;
 document.getElementById('fichaIndClear').onclick=()=>{fichaIndScope=['idc'];fichaChips();drawFichaSeries();};
-document.getElementById('fichaEvoAll').onclick=()=>{fichaEvoDepts=DEPTS.map(d=>d.departamento);fichaDeptChips();drawFichaSeries();};
-document.getElementById('fichaEvoOne').onclick=()=>{fichaEvoDepts=[SELECTED];fichaDeptChips();drawFichaSeries();};
+
+
 /* dirección de indicadores + guía + mapa por indicador */
 function indInversa(code){const di=((EX.indicadores||{}).dic||[]).find(x=>x.code===code);return di?!!di.inversa:null;}
 function dirText(code){const iv=indInversa(code);if(iv===null)return '';return iv?'Inverso (menos es mejor): cuanto MENOR es el valor real, MAYOR es el puntaje. 10 = el mejor del país.':'Directo (más es mejor): cuanto MAYOR es el valor real, MAYOR es el puntaje. 10 = el mejor del país.';}
