@@ -752,7 +752,7 @@ body.print-current .twocol .card,body.print-current .card:has(.siderank){break-i
       </div>
       <div class="gsub" data-sub="trayectoria">
         <div class="controls"><label class="ctl">Indicador <select id="trMetric"></select></label>
-          <button class="btn" id="trAll">Seleccionar todos</button><button class="btn" id="trClear">Limpiar</button><button class="btn" id="btnTrPng">Descargar imagen</button>
+          <button class="btn" id="trAll">Primeras 10</button><span class="ctl" id="trCap" style="font-size:12px;color:#4B5B66"></span><button class="btn" id="trClear">Limpiar</button><button class="btn" id="btnTrPng">Descargar imagen</button>
           <span class="note">Posición en el ranking por año (1 = mejor). El eje se ajusta a las ciudades elegidos.</span></div>
         <div class="pick" id="trPick"></div>
         <div class="chartbox" style="height:480px"><canvas id="trCanvas"></canvas></div>
@@ -1345,7 +1345,7 @@ function saMainFeature(){
   }
   return SA_SHAPE;
 }
-function drawSAInset(svg,w,h,fillFn,clickFn,tipFn){if(!DEPTS.some(function(d){return /Andr/.test(d.departamento);}))return d3.select(null);
+function drawSAInset(svg,w,h,fillFn,clickFn,tipFn){var _noSA=!DEPTS.some(function(d){return /Andr/.test(d.departamento);});if(_noSA){fillFn=function(){return '#DDE1E5';};clickFn=null;tipFn=function(){return '<b>San Andrés</b><br>Sin datos en este índice';};}
   var feat=saFeature()||SA_SHAPE;
   var shape=saMainFeature();
   var bw=122,bh=132,x=w-bw-8,y=8,pad=10,labelH=20,footH=12;
@@ -1363,7 +1363,7 @@ function drawSAInset(svg,w,h,fillFn,clickFn,tipFn){if(!DEPTS.some(function(d){re
   if(tipFn) pp.on('mousemove',function(e){tip.style.opacity=1;tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY+14)+'px';tip.innerHTML=tipFn('San Andrés');}).on('mouseout',function(){tip.style.opacity=0;});
   return pp;
 }
-function saInsetMarkup(fill,w,h){if(!DEPTS.some(function(d){return /Andr/.test(d.departamento);}))return '';
+function saInsetMarkup(fill,w,h){var _noSA=!DEPTS.some(function(d){return /Andr/.test(d.departamento);});if(_noSA)fill='#DDE1E5';
   var shape=saMainFeature();
   var bw=90,bh=98,x=w-bw-5,y=5,pad=7,labelH=15,footH=9;
   var iw=bw-pad*2,ih=bh-labelH-footH-3;
@@ -1603,7 +1603,7 @@ function evRender(){const k=document.getElementById('evMetric').value||'idc';
 document.getElementById('evMetric').onchange=evRender;document.getElementById('evClear').onclick=()=>{evPicked=evPicked.slice(0,1);buildEvPick();evRender();};
 /* trayectoria (historical ranking) */
 function buildTrPick(){document.getElementById('trPick').innerHTML=DEPTS_AZ.map(d=>`<label class="${trPicked.includes(d.departamento)?'on':''}"><input type="checkbox" value="${d.departamento}" ${trPicked.includes(d.departamento)?'checked':''}>${d.departamento}</label>`).join('');
-  document.querySelectorAll('#trPick input').forEach(c=>c.onchange=()=>{if(c.checked)trPicked.push(c.value);else trPicked=trPicked.filter(x=>x!==c.value);buildTrPick();trRender();});}
+  var _cap=document.getElementById('trCap');if(_cap)_cap.textContent='Máximo 10 ciudades ('+trPicked.length+'/10)';document.querySelectorAll('#trPick input').forEach(c=>{if(!c.checked&&trPicked.length>=10){c.disabled=true;c.parentNode.style.opacity='.45';}});document.querySelectorAll('#trPick input').forEach(c=>c.onchange=()=>{if(c.checked&&trPicked.length>=10){c.checked=false;return;}if(c.checked)trPicked.push(c.value);else trPicked=trPicked.filter(x=>x!==c.value);buildTrPick();trRender();});}
 function trRender(){const k=document.getElementById('trMetric').value||'idc';const many=trPicked.length>12;
   const TRPAL=['#253440','#FF3333','#FAA300','#3780FA','#FA7E60','#5A8FFA','#CBAA81','#FAD60E','#4B5B66','#C5BFAA'];const ds=trPicked.map((dn,i)=>{const h=EX.historico.data[dn]&&EX.historico.data[dn][k]||{};return {label:dn,data:HYEARS.map(y=>h[y]==null?null:h[y]),borderColor:dkc(TRPAL[i%TRPAL.length]),backgroundColor:dkc(TRPAL[i%TRPAL.length]),borderDash:LDASH[Math.floor(i/10)%3],borderWidth:many?1.4:2.4,pointRadius:many?0:3,spanGaps:true,tension:.2,clip:false};});
   const vals=[];ds.forEach(d=>d.data.forEach(v=>{if(v!=null)vals.push(v);}));
@@ -1612,7 +1612,7 @@ function trRender(){const k=document.getElementById('trMetric').value||'idc';con
   const range=ymax-ymin,step=range<=8?1:range<=16?2:4;
   const cfg={type:'line',data:{labels:HYEARS,datasets:ds},options:{responsive:true,maintainAspectRatio:false,scales:{y:{reverse:true,min:ymin,max:ymax,title:{display:true,text:'Posición ('+metricLabel(k)+')'},ticks:{stepSize:step,precision:0}}},plugins:{legend:{display:!many,position:'bottom',labels:{boxWidth:30,usePointStyle:true,pointStyle:'line',font:{size:11},generateLabels:LEGGEN}},tooltip:{callbacks:{label:it=>it.dataset.label+': '+(it.raw==null?'s/d':it.raw+'°')}}}}};
   if(trChart)trChart.destroy();trChart=new Chart(document.getElementById('trCanvas'),cfg);}
-document.getElementById('trMetric').onchange=trRender;document.getElementById('trClear').onclick=()=>{trPicked=trPicked.slice(0,1);buildTrPick();trRender();};document.getElementById('trAll').onclick=()=>{trPicked=DEPTS.map(d=>d.departamento);buildTrPick();trRender();};
+document.getElementById('trMetric').onchange=trRender;document.getElementById('trClear').onclick=()=>{trPicked=trPicked.slice(0,1);buildTrPick();trRender();};document.getElementById('trAll').onclick=()=>{trPicked=DEPTS.slice(0,10).map(d=>d.departamento);buildTrPick();trRender();};
 /* ===== Carreras de ranking animadas (bar chart race) ===== */
 function racerFor(cont, items, valueAt, maxV, opts){
   opts=opts||{};const n=items.length, ROWH=opts.rowH||(n>15?30:40);

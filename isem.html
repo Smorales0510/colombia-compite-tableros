@@ -1346,7 +1346,7 @@ function saMainFeature(){
   }
   return SA_SHAPE;
 }
-function drawSAInset(svg,w,h,fillFn,clickFn,tipFn){if(!DEPTS.some(function(d){return /Andr/.test(d.departamento);}))return d3.select(null);
+function drawSAInset(svg,w,h,fillFn,clickFn,tipFn){var _noSA=!DEPTS.some(function(d){return /Andr/.test(d.departamento);});if(_noSA){fillFn=function(){return '#DDE1E5';};clickFn=null;tipFn=function(){return '<b>San Andrés</b><br>Sin datos en este índice';};}
   var feat=saFeature()||SA_SHAPE;
   var shape=saMainFeature();
   var bw=122,bh=132,x=w-bw-8,y=8,pad=10,labelH=20,footH=12;
@@ -1364,7 +1364,7 @@ function drawSAInset(svg,w,h,fillFn,clickFn,tipFn){if(!DEPTS.some(function(d){re
   if(tipFn) pp.on('mousemove',function(e){tip.style.opacity=1;tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY+14)+'px';tip.innerHTML=tipFn('San Andrés');}).on('mouseout',function(){tip.style.opacity=0;});
   return pp;
 }
-function saInsetMarkup(fill,w,h){if(!DEPTS.some(function(d){return /Andr/.test(d.departamento);}))return '';
+function saInsetMarkup(fill,w,h){var _noSA=!DEPTS.some(function(d){return /Andr/.test(d.departamento);});if(_noSA)fill='#DDE1E5';
   var shape=saMainFeature();
   var bw=90,bh=98,x=w-bw-5,y=5,pad=7,labelH=15,footH=9;
   var iw=bw-pad*2,ih=bh-labelH-footH-3;
