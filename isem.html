@@ -852,28 +852,28 @@ body.print-current .twocol .card,body.print-current .card:has(.siderank){break-i
       </div>
     </div>
     <div class="card" id="printArea"><div id="fichaBody"></div></div>
+    <div class="card" id="fichaAI">
+      <h3 class="sec">Perfil automático · <span id="fichaAIName"></span></h3>
+      <div id="fichaAIBody"></div>
+    </div>
     <div class="card">
       <h3 class="sec">Evolución de indicadores (2023 → 2025)</h3>
       <div class="controls">
-        <label class="ctl">Agregar indicador <select id="fichaIndSel"></select></label>
+        <label class="ctl"><input type="checkbox" id="fichaMulti" style="margin-right:5px">Comparar varias variables</label>
+        <label class="ctl"><span id="fichaIndLbl">Variable</span> <select id="fichaIndSel"></select></label>
         <button class="btn" id="fichaIndAll">Todos los pilares</button>
-        <button class="btn" id="fichaIndClear">Limpiar indicadores</button>
-        <button class="btn" id="btnFichaSerPng">Descargar imagen</button>
+        <button class="btn" id="fichaIndClear">Limpiar</button>
+        <button class="btn" id="btnFichaSerPng">Descargar imágenes</button>
         <button class="btn" id="btnFichaSerCsv">Descargar CSV</button>
-        <label class="ctl"><input type="checkbox" id="fichaSerRaw" style="margin-right:5px">Valor real (cifras)</label>
       </div>
       <div class="pick" id="fichaIndChips" style="margin-bottom:8px"></div>
       <div class="note" id="fichaSerNote" style="margin-bottom:10px"></div>
-      <div class="controls" style="margin-bottom:4px"><span class="note">Ciudades (máximo 5 para comparar y ver el mapa):</span>
-        </div>
+      <div class="controls" style="margin-bottom:4px"><span class="note" id="fichaDeptLbl"></span></div>
       <div class="pick" id="fichaEvoDepts" style="margin-bottom:10px"></div>
-      <div class="chartbox" style="height:360px"><canvas id="fichaIndChart"></canvas></div>
-      <div id="fichaIndGrid" style="display:none"></div>
-      <div id="fichaMapWrap" style="display:none;margin-top:16px">
-        <h3 class="sec">Ciudades seleccionados en el mapa · <span id="fichaMapInd"></span> (2025)</h3>
-        <div class="mapwrap" id="fichaMap" style="min-height:320px"></div>
-        <div class="legend"><span id="fichaMapMin"></span><div class="bar" id="fichaMapBar"></div><span id="fichaMapMax"></span></div>
-      </div>
+      <div class="fxwrap"><h4 class="sec" style="margin:10px 0 4px">1. Posición</h4><div class="chartbox" style="height:300px"><canvas id="fichaChartRank"></canvas></div><div class="fxmsg note" style="display:none"></div></div>
+      <div class="fxwrap"><h4 class="sec" style="margin:14px 0 4px">2. Puntaje</h4><div class="chartbox" style="height:300px"><canvas id="fichaIndChart"></canvas></div><div class="fxmsg note" style="display:none"></div></div>
+      <div class="fxwrap"><h4 class="sec" style="margin:14px 0 4px">3. Dato duro</h4><div class="chartbox" style="height:300px"><canvas id="fichaChartRaw"></canvas></div><div class="fxmsg note" style="display:none"></div></div>
+      <div id="fichaFoot"></div>
     </div>
   </section>
 
@@ -2415,6 +2415,161 @@ enhanceUX();
    ['mapmetric',{gen:IDX_ACR+' general',pil:1,ind:1}],['fichaIndSel',{gen:IDX_ACR+' general',pil:1,sub:1,ind:1,hdr:1}],['cfMetric',{ind:1,hdr:1}]].forEach(([id,o])=>{
     const el=document.getElementById(id);if(!el)return;const v=el.value;el.innerHTML=hier(o);if(v&&[...el.options].some(x=>x.value===v))el.value=v;});
 })();
+/* ===== PERFIL: variables única/múltiple, 3 gráficas, perfil automático, notas al pie ===== */
+function fxS(){return window.__FX||(window.__FX={multi:false,charts:{}});}
+function fxPal(){return ['#253440','#FF3333','#FAA300','#3780FA','#FA7E60','#5A8FFA','#CBAA81','#FAD60E','#4B5B66','#C5BFAA'];}
+function fxCap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
+function fxIsInd(c){return !!((EX.indicadores||{}).dic||[]).find(function(x){return x.code===c;});}
+function fxVals(kind,dn,code){
+  if(kind==='score')return fichaSeriesFor(dn,code);
+  if(kind==='raw')return fxIsInd(code)?rawFor(dn,code):null;
+  var h=(((EX.historico||{}).data||{})[dn]||{})[code]||{};
+  return HYEARS.map(function(y){return h[y]==null?null:h[y];});
+}
+function fxItems(){
+  var dep=(fichaEvoDepts&&fichaEvoDepts.length)?fichaEvoDepts:[SELECTED];
+  if(!fichaIndScope.length)fichaIndScope=['idc'];
+  if(fxS().multi){var dn=dep[0]||SELECTED;return fichaIndScope.map(function(c){return {label:fichaIndLabel(c).replace(' (pilar)',''),dn:dn,code:c};});}
+  var c=fichaIndScope[0];return dep.map(function(d){return {label:d,dn:d,code:c};});
+}
+function fxDraw(id,kind,items,title){
+  var cv=document.getElementById(id);if(!cv||!window.Chart)return;
+  var box=cv.parentElement,wrap=box.parentElement,msg=wrap.querySelector('.fxmsg');
+  if(fxS().charts[id]){fxS().charts[id].destroy();fxS().charts[id]=null;}
+  var its=items,ser=its.map(function(it){return fxVals(kind,it.dn,it.code);});
+  var note='';
+  if(kind==='raw'){
+    var keep=[];its.forEach(function(it,i){if(ser[i])keep.push(i);});
+    if(!keep.length){box.style.display='none';msg.style.display='block';msg.textContent='El dato duro solo existe para indicadores individuales. Elige un indicador (no un pilar ni el índice general) para ver esta gráfica.';return;}
+    if(keep.length<its.length)note=' (se omiten series que no son indicadores)';
+    its=keep.map(function(i){return its[i];});ser=keep.map(function(i){return ser[i];});
+    var units={};its.forEach(function(it){units[indUnit(it.code)||'']=1;});
+    if(fxS().multi&&Object.keys(units).length>1){box.style.display='none';msg.style.display='block';msg.textContent='Las variables elegidas tienen unidades distintas, por eso sus datos duros no se pueden comparar en un mismo eje. Mira el dato duro de una variable a la vez o elige variables con la misma unidad.';return;}
+  }
+  box.style.display='block';msg.style.display='none';
+  var unit=(kind==='raw'&&its.length)?indUnit(its[0].code):'';
+  var yAxis=kind==='rank'?{reverse:!SINGLE_YEAR,min:1,max:DEPTS.length,ticks:{precision:0},title:{display:true,text:'Posición (1 = mejor)',font:{size:11}}}
+    :kind==='score'?{min:0,suggestedMax:10,ticks:{precision:0},title:{display:true,text:'Puntaje (0–10)',font:{size:11}}}
+    :{title:{display:true,text:'Dato duro'+(unit?' ('+unit+')':''),font:{size:11}}};
+  var fmtv=function(v){return v==null?'sin dato':(kind==='raw'?rawFmt(v):v);};
+  var cfg;
+  if(SINGLE_YEAR){
+    cfg={type:'bar',data:{labels:its.map(function(it){return it.label;}),datasets:[{label:HYEARS[HYEARS.length-1],data:ser.map(function(s){return s[s.length-1];}),backgroundColor:its.map(function(_,i){return fxPal()[i%10];})}]},
+      options:{responsive:true,maintainAspectRatio:false,scales:{y:Object.assign({},yAxis,{reverse:false}),x:{ticks:{font:{size:11}}}},plugins:{legend:{display:false},title:{display:true,text:title+note},tooltip:{callbacks:{label:function(it){return it.label+': '+fmtv(it.raw);}}}}}};
+  }else{
+    var ds=its.map(function(it,i){return {label:it.label,data:ser[i],borderColor:fxPal()[i%10],borderDash:(typeof LDASH!=='undefined'?LDASH[Math.floor(i/10)%3]:[]),backgroundColor:'transparent',borderWidth:2.4,pointRadius:3,tension:.25,spanGaps:true,clip:false};});
+    cfg={type:'line',data:{labels:HYEARS,datasets:ds},options:{responsive:true,maintainAspectRatio:false,scales:{y:yAxis,x:{ticks:{font:{size:11}}}},plugins:{legend:{display:its.length>1,position:'bottom',labels:{boxWidth:30,usePointStyle:true,pointStyle:'line',font:{size:11},generateLabels:(typeof LEGGEN!=='undefined'?LEGGEN:undefined)}},title:{display:true,text:title+note},tooltip:{callbacks:{label:function(it){return it.dataset.label+': '+fmtv(it.raw)+' ('+it.label+')';}}}}}};
+  }
+  fxS().charts[id]=new Chart(cv,cfg);
+}
+function fxDefs(items){
+  var host=document.getElementById('fichaFoot');if(!host)return;
+  var dic=(EX.indicadores||{}).dic||[],seen={},rows=[],n=0,N=DEPTS.length;
+  var plab={};PILLARS.forEach(function(p){plab[p.key]=p.nombre;});
+  items.forEach(function(it){
+    var code=it.code;if(seen[code])return;seen[code]=1;n++;
+    var di=dic.find(function(x){return x.code===code;}),p=PILLARS.find(function(x){return x.key===code;}),sp=(EX.subpilares||[]).find(function(x){return x.code===code;}),t;
+    if(code==='idc')t='<b>'+IDX_ACR+' general.</b> Puntaje compuesto (0–10) que resume todos los pilares del índice; 10 corresponde al mejor desempeño del país. La posición ordena a los '+N+' '+IDX_MANY+' de mayor a menor puntaje.';
+    else if(p){var k=dic.filter(function(x){return x.pilar===code;}).length;t='<b>Pilar «'+p.nombre+'».</b> Puntaje (0–10) que agrega '+k+' indicadores del pilar; 10 = mejor desempeño del país.';}
+    else if(sp)t='<b>Subpilar «'+sp.nombre+'»</b> del pilar «'+(plab[sp.pilar]||'')+'». Puntaje (0–10) que promedia los indicadores del subpilar.';
+    else if(di){var u=di.unidad,nm=di.nombre.charAt(0).toLowerCase()+di.nombre.slice(1);
+      t='<b>'+di.nombre+'</b> ('+di.code+'). Mide '+nm+', dentro del pilar «'+(plab[di.pilar]||'')+'»'+(u?', expresado en '+u:'')+'. '+(di.inversa?'Es un indicador <i>inverso</i>: a menor valor, mejor desempeño.':'Es un indicador <i>directo</i>: a mayor valor, mejor desempeño.')+' El puntaje (0–10) normaliza el dato duro entre el peor y el mejor de los '+N+' '+IDX_MANY+'; la posición los ordena de 1 (mejor) a '+N+'.'+(di.corte?' Cobertura: '+di.corte+'.':'');}
+    else t='<b>'+fichaIndLabel(code)+'.</b>';
+    rows.push('<div style="margin:0 0 6px"><sup>'+n+'</sup> '+t+'</div>');
+  });
+  host.innerHTML='<div style="border-top:1px solid #cfd8e3;margin-top:14px;padding-top:8px;font-size:12px;color:#4B5B66"><b>Notas al pie · definiciones</b> <span style="font-style:italic">(borrador redactado a partir del nombre, la unidad y la dirección de cada indicador; pendiente de contrastar con la ficha técnica oficial)</span>'+rows.join('')+'</div>';
+}
+function drawFichaSeries(){
+  var items=fxItems();if(!items.length)return;
+  var dn0=items[0].dn,c0=items[0].code;
+  var ttl=fxS().multi?(dn0+' · '+items.length+' variables'):(fichaIndLabel(c0)+' · '+items.length+' '+(items.length===1?IDX_ONE:IDX_MANY));
+  var note=document.getElementById('fichaSerNote');
+  if(note){var dt=(!fxS().multi)?dirText(c0):'';note.innerHTML=(fxS().multi?'Comparando <b>'+items.length+' variables</b> de <b>'+dn0+'</b>.':'Comparando <b>'+items.length+' '+(items.length===1?IDX_ONE:IDX_MANY)+'</b> en <b>'+fichaIndLabel(c0)+'</b>.')+(dt?' '+dt:'');}
+  fxDraw('fichaChartRank','rank',items,'Posición · '+ttl);
+  fxDraw('fichaIndChart','score',items,'Puntaje · '+ttl);
+  fxDraw('fichaChartRaw','raw',items,'Dato duro · '+ttl);
+  fxDefs(items);
+}
+function fichaChips(){var host=document.getElementById('fichaIndChips');if(!host)return;
+  if(!fxS().multi){host.innerHTML='<label class="on">'+fichaIndLabel(fichaIndScope[0]||'idc').replace(' (pilar)','')+'</label>';return;}
+  host.innerHTML=fichaIndScope.map(function(c,i){return '<label class="on">'+fichaIndLabel(c).replace(' (pilar)','')+' <span data-x="'+i+'" style="cursor:pointer;font-weight:800;margin-left:3px">×</span></label>';}).join('');
+  host.querySelectorAll('[data-x]').forEach(function(x){x.onclick=function(){fichaIndScope.splice(+x.dataset.x,1);if(!fichaIndScope.length)fichaIndScope=['idc'];fichaChips();drawFichaSeries();};});}
+function fichaDeptChips(){var host=document.getElementById('fichaEvoDepts');if(!host)return;
+  var lb=document.getElementById('fichaDeptLbl');if(lb)lb.textContent=fxS().multi?fxCap(IDX_ONE)+' a analizar (con varias variables se analiza un solo '+IDX_ONE+'):':fxCap(IDX_MANY)+' (máximo 5 para comparar):';
+  if(fxS().multi&&fichaEvoDepts.length>1)fichaEvoDepts=fichaEvoDepts.slice(0,1);
+  if(fichaEvoDepts.length>5)fichaEvoDepts=fichaEvoDepts.slice(0,5);
+  host.innerHTML=DEPTS.map(function(d){var on=fichaEvoDepts.indexOf(d.departamento)>=0;return '<label class="'+(on?'on':'')+'"><input type="checkbox" '+(on?'checked':'')+' value="'+d.departamento+'">'+d.departamento+'</label>';}).join('');
+  if(!fxS().multi)host.querySelectorAll('input').forEach(function(c){if(!c.checked&&fichaEvoDepts.length>=5){c.disabled=true;c.parentNode.style.opacity='.45';}});
+  host.querySelectorAll('input').forEach(function(c){c.onchange=function(){
+    if(fxS().multi){fichaEvoDepts=[c.value];}
+    else if(c.checked){if(fichaEvoDepts.length>=5){c.checked=false;return;}if(fichaEvoDepts.indexOf(c.value)<0)fichaEvoDepts.push(c.value);}
+    else fichaEvoDepts=fichaEvoDepts.filter(function(x){return x!==c.value;});
+    if(!fichaEvoDepts.length)fichaEvoDepts=[SELECTED];
+    fichaDeptChips();drawFichaSeries();};});}
+function fxMode(){var all=document.getElementById('fichaIndAll');if(all)all.style.display=fxS().multi?'':'none';
+  var l=document.getElementById('fichaIndLbl');if(l)l.textContent=fxS().multi?'Agregar variable':'Variable';}
+(function(){
+  var m=document.getElementById('fichaMulti');if(m)m.onchange=function(){fxS().multi=m.checked;
+    if(fxS().multi){fichaEvoDepts=[fichaEvoDepts[0]||SELECTED];}else{fichaIndScope=[fichaIndScope[0]||'idc'];}
+    fxMode();fichaChips();fichaDeptChips();drawFichaSeries();};
+  document.getElementById('fichaIndSel').onchange=function(){var v=this.value;if(!v)return;
+    if(fxS().multi){if(fichaIndScope.indexOf(v)<0)fichaIndScope.push(v);}else fichaIndScope=[v];
+    fichaChips();drawFichaSeries();};
+  document.getElementById('fichaIndAll').onclick=function(){fichaIndScope=PILLARS.map(function(p){return p.key;});fichaChips();drawFichaSeries();};
+  document.getElementById('fichaIndClear').onclick=function(){fichaIndScope=['idc'];fichaChips();drawFichaSeries();};
+  document.getElementById('btnFichaSerPng').onclick=function(){
+    var nm=SELECTED.replace(/[^a-zA-Z0-9]/g,'_');
+    [['fichaChartRank','posicion'],['fichaIndChart','puntaje'],['fichaChartRaw','dato_duro']].forEach(function(p,i){
+      var cv=document.getElementById(p[0]);if(!cv||cv.parentElement.style.display==='none')return;
+      setTimeout(function(){exportCanvas(p[0],p[1]+'_'+nm,p[1].replace('_',' ')+' · '+SELECTED+' · '+HYEARS[0]+'–'+HYEARS[HYEARS.length-1]);},i*400);});};
+  document.getElementById('btnFichaSerCsv').onclick=function(){
+    var q=function(s){s=String(s==null?'':s);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+    var items=fxItems(),lines=[['Medida','Serie'].concat(HYEARS).join(',')];
+    [['Posición','rank'],['Puntaje','score'],['Dato duro','raw']].forEach(function(k){items.forEach(function(it){var v=fxVals(k[1],it.dn,it.code);if(!v)return;
+      lines.push([k[0],q(fxS().multi?it.label:it.dn)].concat(v.map(function(x){return x==null?'':x;})).join(','));});});
+    var blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='evolucion_'+HYEARS[0]+'_'+HYEARS[HYEARS.length-1]+'.csv';a.click();};
+  fxMode();
+})();
+/* ---- Perfil automático (reglas sobre los datos del tablero) ---- */
+function fxMean(a){a=a.filter(function(v){return typeof v==='number';});return a.length?a.reduce(function(x,y){return x+y;},0)/a.length:null;}
+function fxSgn(v,dec){if(v==null)return '–';var s=v>0?'+':'';return s+v.toFixed(dec==null?1:dec);}
+function fxProfile(){
+  var host=document.getElementById('fichaAIBody');if(!host)return;
+  var dn=SELECTED,d=byName[dn],nm=document.getElementById('fichaAIName');if(nm)nm.textContent=dn;
+  if(!d){host.innerHTML='';return;}
+  var N=DEPTS.length,yrs=HYEARS.filter(function(y){return d['idc_'+y]!=null;});
+  if(!yrs.length){host.innerHTML='<div class="note">Sin datos para este '+IDX_ONE+'.</div>';return;}
+  var y0=yrs[0],y1=yrs[yrs.length-1],multi=y0!==y1;
+  var rk=function(code,y){var h=(((EX.historico||{}).data||{})[dn]||{})[code];return h&&h[y]!=null?h[y]:null;};
+  var avg=function(code,y){return fxMean(DEPTS.map(function(x){return score(x,code,y);}));};
+  var s1=d['idc_'+y1],r1=rk('idc',y1),a1=avg('idc',y1),s0=d['idc_'+y0],r0=rk('idc',y0);
+  var tercio=r1==null?'':(r1<=N/3?'tercio superior':(r1<=2*N/3?'tercio medio':'tercio inferior'));
+  var h='<p style="margin:0 0 8px;font-size:14px;line-height:1.5"><b>'+dn+'</b> ocupa el puesto <b>'+(r1==null?'–':r1)+' de '+N+'</b> en el '+IDX_ACR+' '+y1+(tercio?' ('+tercio+')':'')+', con un puntaje de <b>'+s1.toFixed(2)+'</b> sobre 10; el promedio nacional es '+(a1==null?'–':a1.toFixed(2))+(a1==null?'':' ('+(s1-a1>=0?'<b style="color:#0e7c66">'+fxSgn(s1-a1,2)+' por encima</b>':'<b style="color:#b10b4f">'+fxSgn(s1-a1,2)+' por debajo</b>')+')')+'.';
+  if(multi&&s0!=null){var dr=(r0!=null&&r1!=null)?r0-r1:null;
+    h+=' Entre '+y0+' y '+y1+' su puntaje pasó de '+s0.toFixed(2)+' a '+s1.toFixed(2)+' ('+fxSgn(s1-s0,2)+')'+(dr==null?'':' y su posición '+(dr>0?'<b style="color:#0e7c66">mejoró '+dr+' puesto'+(dr>1?'s':'')+'</b>':(dr<0?'<b style="color:#b10b4f">cayó '+(-dr)+' puesto'+(dr<-1?'s':'')+'</b>':'se mantuvo'))+' (del '+r0+' al '+r1+')')+'.';}
+  h+='</p>';
+  var prow=PILLARS.map(function(p){var sc=score(d,p.key,y1),a=avg(p.key,y1),r=rk(p.key,y1),r0p=multi?rk(p.key,y0):null;return {n:p.nombre,sc:sc,a:a,r:r,dr:(r!=null&&r0p!=null)?r0p-r:null};}).filter(function(x){return x.sc!=null;});
+  var byR=prow.slice().sort(function(a,b){return (a.r==null?99:a.r)-(b.r==null?99:b.r);});
+  if(byR.length>1)h+='<p style="margin:0 0 10px;font-size:14px;line-height:1.5">Su pilar más fuerte es <b>'+byR[0].n+'</b> (puesto '+byR[0].r+') y el más rezagado es <b>'+byR[byR.length-1].n+'</b> (puesto '+byR[byR.length-1].r+').</p>';
+  var th='style="padding:4px 8px"';
+  h+='<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%;margin-bottom:12px"><thead><tr style="text-align:left;border-bottom:2px solid #cfd8e3"><th '+th+'>Pilar</th><th '+th+'>Puesto</th><th '+th+'>Puntaje</th><th '+th+'>vs promedio nacional</th>'+(multi?'<th '+th+'>Cambio de puesto desde '+y0+'</th>':'')+'</tr></thead><tbody>'+
+    prow.map(function(x){var df=x.a==null?null:x.sc-x.a;return '<tr style="border-bottom:1px solid #e6ecf5"><td '+th+'><b>'+x.n+'</b></td><td '+th+'>'+(x.r==null?'–':x.r+' de '+N)+'</td><td '+th+'>'+x.sc.toFixed(2)+'</td><td style="padding:4px 8px;color:'+(df==null?'inherit':(df>=0?'#0e7c66':'#b10b4f'))+';font-weight:700">'+fxSgn(df,2)+'</td>'+(multi?'<td style="padding:4px 8px;color:'+(x.dr==null||x.dr===0?'inherit':(x.dr>0?'#0e7c66':'#b10b4f'))+'">'+(x.dr==null?'–':(x.dr>0?'▲ '+x.dr:(x.dr<0?'▼ '+(-x.dr):'='))) +'</td>':'')+'</tr>';}).join('')+'</tbody></table></div>';
+  var dic=(EX.indicadores||{}).dic||[],mat=(EX.indicadores||{}).matrix||{};
+  var rows=dic.map(function(di){var v=(mat[dn]||{})[di.code];if(typeof v!=='number')return null;
+    var a=fxMean(DEPTS.map(function(x){return (mat[x.departamento]||{})[di.code];}));
+    var rv=rawFor(dn,di.code),raw=rv?rv[rv.length-1]:null,u=di.unidad?' '+di.unidad:'';
+    return {nm:di.nombre,v:v,a:a,diff:a==null?null:v-a,raw:raw,u:u,code:di.code};}).filter(Boolean);
+  var withDiff=rows.filter(function(x){return x.diff!=null;}).sort(function(a,b){return b.diff-a.diff;});
+  var li=function(x){return '<li style="margin:2px 0"><b>'+x.nm+'</b> — puntaje '+x.v.toFixed(1)+' (promedio '+(x.a==null?'–':x.a.toFixed(1))+')'+(x.raw!=null?'; dato: '+rawFmt(x.raw)+x.u:'')+'</li>';};
+  if(withDiff.length>=6)h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:10px"><div><div style="font-weight:800;color:#0e7c66;margin-bottom:4px">Fortalezas (mayor ventaja sobre el promedio)</div><ol style="margin:0;padding-left:18px;font-size:13px">'+withDiff.slice(0,5).map(li).join('')+'</ol></div><div><div style="font-weight:800;color:#b10b4f;margin-bottom:4px">Debilidades (mayor rezago frente al promedio)</div><ol style="margin:0;padding-left:18px;font-size:13px">'+withDiff.slice(-5).reverse().map(li).join('')+'</ol></div></div>';
+  if(multi){var mv=dic.map(function(di){var a=rk(di.code,y0),b=rk(di.code,y1);return (a!=null&&b!=null)?{nm:di.nombre,a:a,b:b,dr:a-b}:null;}).filter(Boolean).sort(function(x,y){return y.dr-x.dr;});
+    var up=mv.filter(function(x){return x.dr>0;}).slice(0,3),dw=mv.filter(function(x){return x.dr<0;}).slice(-3).reverse();
+    if(up.length||dw.length)h+='<div style="font-size:13px;margin-bottom:8px">'+(up.length?'<div><b style="color:#0e7c66">Mayores avances ('+y0+'→'+y1+'):</b> '+up.map(function(x){return x.nm+' (puesto '+x.a+' → '+x.b+')';}).join('; ')+'.</div>':'')+(dw.length?'<div style="margin-top:3px"><b style="color:#b10b4f">Mayores retrocesos:</b> '+dw.map(function(x){return x.nm+' (puesto '+x.a+' → '+x.b+')';}).join('; ')+'.</div>':'')+'</div>';}
+  h+='<div class="note" style="margin-top:6px">Perfil generado automáticamente a partir de los datos de este tablero (posición, puntaje y comparación con el promedio nacional). Es una lectura descriptiva y no reemplaza el análisis de expertos.</div>';
+  host.innerHTML=h;
+}
+function fichaSeriesRefresh(){fichaEvoDepts=[SELECTED];fichaChips();fichaDeptChips();drawFichaSeries();fxProfile();}
+
 (function(){const bad=new Set([...(EX.indicadores.dic||[]).map(d=>d.code),...(EX.subpilares||[]).map(s=>s.code)]);
   const subs=new Set((EX.subpilares||[]).map(s=>s.code));
   document.querySelectorAll('select').forEach(s=>{if(/^cf/.test(s.id))return;const rm=/^ficha/.test(s.id)?subs:bad;[...s.options].forEach(o=>{if(rm.has(o.value))o.remove();});s.querySelectorAll('optgroup').forEach(g=>{if(!g.children.length)g.remove();});});})();
