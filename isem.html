@@ -2544,16 +2544,19 @@ function fxProfile(){
   var avg=function(code,y){return fxMean(DEPTS.map(function(x){return score(x,code,y);}));};
   var s1=d['idc_'+y1],r1=rk('idc',y1),a1=avg('idc',y1),s0=d['idc_'+y0],r0=rk('idc',y0);
   var tercio=r1==null?'':(r1<=N/3?'tercio superior':(r1<=2*N/3?'tercio medio':'tercio inferior'));
-  var h='<p style="margin:0 0 8px;font-size:14px;line-height:1.5"><b>'+dn+'</b> ocupa el puesto <b>'+(r1==null?'–':r1)+' de '+N+'</b> en el '+IDX_ACR+' '+y1+(tercio?' ('+tercio+')':'')+', con un puntaje de <b>'+s1.toFixed(2)+'</b> sobre 10; el promedio nacional es '+(a1==null?'–':a1.toFixed(2))+(a1==null?'':' ('+(s1-a1>=0?'<b style="color:#0e7c66">'+fxSgn(s1-a1,2)+' por encima</b>':'<b style="color:#b10b4f">'+fxSgn(s1-a1,2)+' por debajo</b>')+')')+'.';
+  var h='<p style="margin:0 0 8px;font-size:14px;line-height:1.5"><b>'+dn+'</b> ocupa el puesto <b>'+(r1==null?'–':r1)+' de '+N+'</b> en el '+IDX_ACR+' '+y1+(tercio?' ('+tercio+')':'')+', con <b>'+s1.toFixed(1)+'</b> sobre 10'+(a1==null?'':', '+Math.abs(s1-a1).toFixed(1)+' '+(s1>=a1?'<b style="color:#0e7c66">por encima</b>':'<b style="color:#b10b4f">por debajo</b>')+' del promedio nacional')+'.';
   if(multi&&s0!=null){var dr=(r0!=null&&r1!=null)?r0-r1:null;
-    h+=' Entre '+y0+' y '+y1+' su puntaje pasó de '+s0.toFixed(2)+' a '+s1.toFixed(2)+' ('+fxSgn(s1-s0,2)+')'+(dr==null?'':' y su posición '+(dr>0?'<b style="color:#0e7c66">mejoró '+dr+' puesto'+(dr>1?'s':'')+'</b>':(dr<0?'<b style="color:#b10b4f">cayó '+(-dr)+' puesto'+(dr<-1?'s':'')+'</b>':'se mantuvo'))+' (del '+r0+' al '+r1+')')+'.';}
+    if(dr!=null)h+=' Desde '+y0+' '+(dr>0?'<b style="color:#0e7c66">subió '+dr+' puesto'+(dr>1?'s':'')+'</b>':(dr<0?'<b style="color:#b10b4f">bajó '+(-dr)+' puesto'+(dr<-1?'s':'')+'</b>':'mantuvo su puesto'))+(dr!==0?' (del '+r0+'° al '+r1+'°)':'')+'.';}
   h+='</p>';
   var prow=PILLARS.map(function(p){var sc=score(d,p.key,y1),a=avg(p.key,y1),r=rk(p.key,y1),r0p=multi?rk(p.key,y0):null;return {n:p.nombre,sc:sc,a:a,r:r,dr:(r!=null&&r0p!=null)?r0p-r:null};}).filter(function(x){return x.sc!=null;});
   var byR=prow.slice().sort(function(a,b){return (a.r==null?99:a.r)-(b.r==null?99:b.r);});
   if(byR.length>1)h+='<p style="margin:0 0 10px;font-size:14px;line-height:1.5">Su pilar más fuerte es <b>'+byR[0].n+'</b> (puesto '+byR[0].r+') y el más rezagado es <b>'+byR[byR.length-1].n+'</b> (puesto '+byR[byR.length-1].r+').</p>';
-  var th='style="padding:4px 8px"';
-  h+='<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%;margin-bottom:12px"><thead><tr style="text-align:left;border-bottom:2px solid #cfd8e3"><th '+th+'>Pilar</th><th '+th+'>Puesto</th><th '+th+'>Puntaje</th><th '+th+'>vs promedio nacional</th>'+(multi?'<th '+th+'>Cambio de puesto desde '+y0+'</th>':'')+'</tr></thead><tbody>'+
-    prow.map(function(x){var df=x.a==null?null:x.sc-x.a;return '<tr style="border-bottom:1px solid #e6ecf5"><td '+th+'><b>'+x.n+'</b></td><td '+th+'>'+(x.r==null?'–':x.r+' de '+N)+'</td><td '+th+'>'+x.sc.toFixed(2)+'</td><td style="padding:4px 8px;color:'+(df==null?'inherit':(df>=0?'#0e7c66':'#b10b4f'))+';font-weight:700">'+fxSgn(df,2)+'</td>'+(multi?'<td style="padding:4px 8px;color:'+(x.dr==null||x.dr===0?'inherit':(x.dr>0?'#0e7c66':'#b10b4f'))+'">'+(x.dr==null?'–':(x.dr>0?'▲ '+x.dr:(x.dr<0?'▼ '+(-x.dr):'='))) +'</td>':'')+'</tr>';}).join('')+'</tbody></table></div>';
+  var D=fxData(dn),H3='style="margin:4px 0 6px;font-size:15px"',GR='display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;margin-bottom:16px';
+  h+='<h3 '+H3+'>Pilares: '+(D.multi?y0+' → '+y1:y1)+'</h3><div style="overflow-x:auto;margin-bottom:16px">'+fxPilTable(D,13)+'</div>';
+  if(D.multi){var db=fxSvgDumbbell(D),mx=fxSvgMatrix(D,560,460);
+    h+='<div style="'+GR+'">'+(db?'<div><h3 '+H3+'>Cómo se movió cada pilar en el ranking</h3>'+db+'</div>':'')+(mx?'<div><h3 '+H3+'>Qué pilares ganan o pierden terreno</h3>'+mx+'<div class="note" style="margin-top:4px">Cada punto es un pilar. Ventaja = su puntaje menos el promedio nacional. Terreno = cuánto cambió su puntaje desde '+y0+', comparado con el cambio del promedio nacional.</div></div>':'')+'</div>';}
+  var ld=fxLadder(dn,y1,13),lt=fxLeaderTbl(D,dn,10,12);
+  h+='<div style="'+GR+'">'+(ld?'<div><h3 '+H3+'>Dónde está frente a los demás</h3>'+ld+'</div>':'')+(lt?'<div style="grid-column:1/-1"><h3 '+H3+'>Dónde está más lejos del mejor del país</h3>'+lt+'</div>':'')+'</div>';
   var dic=(EX.indicadores||{}).dic||[],mat=(EX.indicadores||{}).matrix||{};
   var rows=dic.map(function(di){var v=(mat[dn]||{})[di.code];if(typeof v!=='number')return null;
     var a=fxMean(DEPTS.map(function(x){return (mat[x.departamento]||{})[di.code];}));
@@ -2583,8 +2586,8 @@ function fxData(dn){
   var dic=(EX.indicadores||{}).dic||[],mat=(EX.indicadores||{}).matrix||{},ser=((EX.series||{})[dn])||{};
   var i0=HYEARS.indexOf(y0),i1=HYEARS.indexOf(y1);
   var cnt={};dic.forEach(function(di){cnt[di.pilar]=(cnt[di.pilar]||0)+1;});
-  var pil=PILLARS.map(function(p){var s1=score(d,p.key,y1),s0=score(d,p.key,y0),a1=fxAvgY(p.key,y1),r1=fxRkY(dn,p.key,y1),r0=fxRkY(dn,p.key,y0);
-    return {key:p.key,n:p.nombre,s1:s1,s0:s0,a1:a1,gap:(s1!=null&&a1!=null)?s1-a1:null,r1:r1,r0:r0,dr:(r0!=null&&r1!=null)?r0-r1:null,ds:(s1!=null&&s0!=null)?s1-s0:null};}).filter(function(x){return x.s1!=null;});
+  var pil=PILLARS.map(function(p){var s1=score(d,p.key,y1),s0=score(d,p.key,y0),a1=fxAvgY(p.key,y1),a0=fxAvgY(p.key,y0),r1=fxRkY(dn,p.key,y1),r0=fxRkY(dn,p.key,y0);
+    return {key:p.key,n:p.nombre,s1:s1,s0:s0,a1:a1,a0:a0,gap:(s1!=null&&a1!=null)?s1-a1:null,r1:r1,r0:r0,dr:(r0!=null&&r1!=null)?r0-r1:null,ds:(s1!=null&&s0!=null)?s1-s0:null,rel:(multi&&s1!=null&&s0!=null&&a1!=null&&a0!=null)?(s1-s0)-(a1-a0):null};}).filter(function(x){return x.s1!=null;});
   var inds=dic.map(function(di){var v=(mat[dn]||{})[di.code];if(typeof v!=='number')return null;
     var a=fxMean(DEPTS.map(function(x){return (mat[x.departamento]||{})[di.code];}));
     var w=1/((cnt[di.pilar]||1)*nP),sv=ser[di.code]||[],s0=sv[i0],s1=sv[i1];
@@ -2593,7 +2596,7 @@ function fxData(dn){
       chg:(multi&&typeof s0==='number'&&typeof s1==='number')?(s1-s0)*w:null};}).filter(Boolean);
   return {d:d,y0:y0,y1:y1,multi:multi,N:N,nP:nP,yrs:yrs,pil:pil,inds:inds};
 }
-function fxLi(x,key){var v=x[key];return '<li style="margin:1px 0"><b>'+x.nm+'</b> <span style="color:#5c6a82">('+x.pil+')</span> · puntaje '+fxF(x.v,1)+' vs '+fxF(x.a,1)+' nacional'+(x.raw!=null?' · dato '+rawFmt(x.raw)+x.u:'')+' · <b style="color:'+fxCol(v)+'">'+(v>0?'+':'')+fxF(v,3)+'</b></li>';}
+function fxLi(x,key){return '<li style="margin:1px 0"><b>'+x.nm+'</b> <span style="color:#5c6a82">('+x.pil+')</span> · <b style="color:'+fxCol(x[key])+'">'+fxF(x.v,1)+'</b> vs '+fxF(x.a,1)+' nacional'+(x.raw!=null?' · dato '+rawFmt(x.raw)+x.u:'')+'</li>';}
 function fxCfgRank(dn,yrs){var data=yrs.map(function(y){return fxRkY(dn,'idc',y);});
   return {type:'line',data:{labels:yrs,datasets:[{label:'Posición',data:data,borderColor:'#2476c5',backgroundColor:'rgba(36,118,197,.15)',borderWidth:2.4,pointRadius:3,spanGaps:true,tension:.2,fill:true}]},
     options:{scales:{y:{reverse:true,min:Math.max(1,Math.min.apply(null,data.filter(function(v){return v!=null;}))-2),max:Math.min(DEPTS.length,Math.max.apply(null,data.filter(function(v){return v!=null;}))+2),title:{display:true,text:'Posición (1 = mejor)',font:{size:10}},ticks:{precision:0,font:{size:10}}},x:{ticks:{font:{size:10}}}},plugins:{legend:{display:false}}}};}
@@ -2613,6 +2616,87 @@ function fxHeat(rows,yrs,kind){
     if(kind==='score')return '<td class="mono" style="background:'+color(v)+';color:'+inkOn(color(v))+'">'+v.toFixed(2)+'</td>';
     var t=v<=DEPTS.length/3?'#d7efe6':(v<=2*DEPTS.length/3?'#fff4d6':'#f9dadf');return '<td class="mono" style="background:'+t+'">'+v+'</td>';}).join('')+'</tr>';});
   return '<table class="indtbl" style="margin-top:2px"><thead><tr><th class="l">'+(kind==='score'?'Puntaje por pilar':'Posición por pilar')+'</th>'+th+'</tr></thead><tbody>'+b+'</tbody></table>';}
+/* ---- Componentes compartidos (PDF y Perfil web): tabla de pilares, dumbbell, matriz, escalera, brecha vs líder ---- */
+function fxTier(r,N){return r==null?'#fff':(r<=N/3?'#d7efe6':(r<=2*N/3?'#fff4d6':'#f9dadf'));}
+function fxMove(dr){return dr==null?'–':(dr>0?'<span style="color:#0e7c66;font-weight:700">▲ Subió '+dr+(dr>1?' puestos':' puesto')+'</span>':(dr<0?'<span style="color:#b10b4f;font-weight:700">▼ Bajó '+(-dr)+(dr<-1?' puestos':' puesto')+'</span>':'<span style="color:#5c6a82">= Igual</span>'));}
+function fxShort(s,n){return s.length>n?s.slice(0,n-1)+'…':s;}
+function fxPilTable(D,fs){
+  var N=D.N,y0=D.y0,y1=D.y1,pad=fs>10?'5px 9px':'2px 5px';
+  var rows=D.pil.slice().sort(function(a,b){return (a.r1==null?99:a.r1)-(b.r1==null?99:b.r1);});
+  var th=function(t,l){return '<th style="text-align:'+(l?'left':'center')+';padding:'+pad+';border-bottom:2px solid #cfd8e3;font-size:'+(fs-1)+'px;text-transform:uppercase;letter-spacing:.03em;color:#5c6a82">'+t+'</th>';};
+  var td=function(t,l,bg){return '<td style="text-align:'+(l?'left':'center')+';padding:'+pad+';border-bottom:1px solid #e6ecf5'+(bg?';background:'+bg:'')+'">'+t+'</td>';};
+  var head=D.multi?th('Pilar',1)+th('Puesto '+y0+' → '+y1)+th('Puntaje '+y0+' → '+y1)+th('Qué pasó'):th('Pilar',1)+th('Puesto')+th('Puntaje')+th('Frente al promedio nacional');
+  var body=rows.map(function(p){
+    if(D.multi){
+      var ps=(p.r0==null?'–':'<span style="color:#7b8794">'+p.r0+'°</span>')+' → <b>'+(p.r1==null?'–':p.r1+'°')+'</b>';
+      var sc=(p.s0==null?'–':'<span style="color:#7b8794">'+fxF(p.s0,1)+'</span>')+' → <b>'+fxF(p.s1,1)+'</b>';
+      return '<tr>'+td(p.n,1)+td(ps,0,fxTier(p.r1,N))+td(sc)+td(fxMove(p.dr))+'</tr>';}
+    var g=p.gap==null?'–':'<span style="color:'+fxCol(p.gap)+';font-weight:700">'+(p.gap>=0?'+':'−')+fxF(Math.abs(p.gap),1)+'</span> '+(p.gap>=0?'sobre':'bajo')+' el promedio';
+    return '<tr>'+td(p.n,1)+td('<b>'+(p.r1==null?'–':p.r1+'°')+'</b> de '+N,0,fxTier(p.r1,N))+td(fxF(p.s1,1))+td(g)+'</tr>';}).join('');
+  return '<div style="font-size:'+(fs-1)+'px;color:#5c6a82;margin:0 0 3px">Puesto entre '+N+' '+IDX_MANY+' (1° = el mejor). Color del puesto: <b style="color:#0e7c66">verde</b> = tercio superior, <b style="color:#b8860b">amarillo</b> = medio, <b style="color:#b10b4f">rojo</b> = inferior.</div>'+
+    '<table style="border-collapse:collapse;width:100%;font-size:'+fs+'px"><thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody></table>';
+}
+function fxSvgDumbbell(D){
+  var N=D.N,rows=D.pil.filter(function(p){return p.r1!=null&&p.r0!=null;}).sort(function(a,b){return a.r1-b.r1;});
+  if(!rows.length)return '';
+  var W=540,L=175,R=26,rh=18,top=24,H=top+rows.length*rh+50,pw=W-L-R,ph=rows.length*rh;
+  var X=function(r){return L+(r-1)/(N-1)*pw;};
+  var s='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg" font-family="inherit">';
+  [[1,N/3,'#e3f3ec','Tercio superior'],[N/3,2*N/3,'#fff6dc','Tercio medio'],[2*N/3,N,'#fbe3e7','Tercio inferior']].forEach(function(b){
+    s+='<rect x="'+X(b[0])+'" y="'+top+'" width="'+(X(b[1])-X(b[0]))+'" height="'+ph+'" fill="'+b[2]+'"/><text x="'+((X(b[0])+X(b[1]))/2)+'" y="'+(top-8)+'" font-size="8.5" text-anchor="middle" fill="#5c6a82">'+b[3]+'</text>';});
+  rows.forEach(function(p,i){var y=top+i*rh+rh/2,x0=X(p.r0),x1=X(p.r1),c=p.dr>0?'#0e7c66':(p.dr<0?'#b10b4f':'#5c6a82');
+    s+='<text x="'+(L-8)+'" y="'+(y+3)+'" font-size="9.5" text-anchor="end" fill="#02285e">'+fxShort(p.n,30)+'</text>';
+    if(x0!==x1)s+='<line x1="'+x0+'" x2="'+x1+'" y1="'+y+'" y2="'+y+'" stroke="'+c+'" stroke-width="2.2"/>';
+    s+='<circle cx="'+x0+'" cy="'+y+'" r="4" fill="#fff" stroke="#7b8794" stroke-width="1.6"/><circle cx="'+x1+'" cy="'+y+'" r="4.6" fill="'+c+'"/>';
+    s+='<text x="'+(Math.max(x0,x1)+9)+'" y="'+(y+3)+'" font-size="9" font-weight="700" fill="'+c+'">'+p.r1+'°</text>';});
+  var ay=top+ph+12;
+  [1,Math.round(N/3),Math.round(2*N/3),N].forEach(function(t){s+='<text x="'+X(t)+'" y="'+ay+'" font-size="8.5" text-anchor="middle" fill="#5c6a82">'+t+'°</text>';});
+  s+='<text x="'+L+'" y="'+(ay+13)+'" font-size="8.5" fill="#5c6a82">← mejor puesto</text><text x="'+(W-R)+'" y="'+(ay+13)+'" font-size="8.5" text-anchor="end" fill="#5c6a82">peor puesto →</text>';
+  s+='<circle cx="'+(L+pw/2-62)+'" cy="'+(ay+26)+'" r="3.6" fill="#fff" stroke="#7b8794" stroke-width="1.6"/><text x="'+(L+pw/2-55)+'" y="'+(ay+29)+'" font-size="8.5" fill="#5c6a82">'+D.y0+'</text>';
+  s+='<circle cx="'+(L+pw/2-12)+'" cy="'+(ay+26)+'" r="4" fill="#0e7c66"/><text x="'+(L+pw/2-5)+'" y="'+(ay+29)+'" font-size="8.5" fill="#5c6a82">'+D.y1+' (verde mejoró · rojo empeoró)</text>';
+  return s+'</svg>';
+}
+function fxSvgMatrix(D,W,H){
+  var pts=D.pil.filter(function(p){return p.rel!=null&&p.gap!=null;}).sort(function(a,b){return (a.r1==null?99:a.r1)-(b.r1==null?99:b.r1);});
+  if(pts.length<3)return '';
+  var lg=Math.ceil(pts.length/2)*11+8,l=44,r=12,t=16,b=36,pw=W-l-r,ph=H-t-b-lg;
+  var xm=Math.max(1,Math.max.apply(null,pts.map(function(p){return Math.abs(p.gap);}))*1.18),ym=Math.max(.5,Math.max.apply(null,pts.map(function(p){return Math.abs(p.rel);}))*1.18);
+  var X=function(v){return l+(v+xm)/(2*xm)*pw;},Y=function(v){return t+(ym-v)/(2*ym)*ph;};
+  var s='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg" font-family="inherit">';
+  var x0=X(0),y0=Y(0);
+  s+='<rect x="'+x0+'" y="'+t+'" width="'+(l+pw-x0)+'" height="'+(y0-t)+'" fill="#e3f3ec"/><rect x="'+x0+'" y="'+y0+'" width="'+(l+pw-x0)+'" height="'+(t+ph-y0)+'" fill="#fff6dc"/><rect x="'+l+'" y="'+t+'" width="'+(x0-l)+'" height="'+(y0-t)+'" fill="#e8f0fb"/><rect x="'+l+'" y="'+y0+'" width="'+(x0-l)+'" height="'+(t+ph-y0)+'" fill="#fbe3e7"/>';
+  s+='<line x1="'+x0+'" x2="'+x0+'" y1="'+t+'" y2="'+(t+ph)+'" stroke="#8a96a8"/><line x1="'+l+'" x2="'+(l+pw)+'" y1="'+y0+'" y2="'+y0+'" stroke="#8a96a8"/>';
+  var q=function(x,y,a,txt){return '<text x="'+x+'" y="'+y+'" font-size="8.5" font-style="italic" text-anchor="'+a+'" fill="#5c6a82">'+txt+'</text>';};
+  s+=q(l+pw-4,t+11,'end','Ventaja que crece')+q(l+pw-4,t+ph-5,'end','Ventaja que se reduce')+q(l+4,t+11,'start','Rezago que se cierra')+q(l+4,t+ph-5,'start','Rezago que se profundiza');
+  var col=function(p){return p.gap>=0?(p.rel>=0?'#0e7c66':'#b8860b'):(p.rel>=0?'#2476c5':'#b10b4f');};
+  pts.forEach(function(p,i){s+='<circle cx="'+X(p.gap)+'" cy="'+Y(p.rel)+'" r="6.4" fill="'+col(p)+'" stroke="#fff" stroke-width="1"/><text x="'+X(p.gap)+'" y="'+(Y(p.rel)+3)+'" font-size="8" font-weight="700" text-anchor="middle" fill="#fff">'+(i+1)+'</text>';});
+  var ly=t+ph+b+4,half=Math.ceil(pts.length/2);
+  pts.forEach(function(p,i){var cx=i<half?l:l+pw/2,cy=ly+(i%half)*11;s+='<text x="'+cx+'" y="'+cy+'" font-size="8.5" fill="#02285e"><tspan font-weight="700">'+(i+1)+'</tspan>  '+fxShort(p.n,36)+'</text>';});
+  s+='<text x="'+(l+pw/2)+'" y="'+(t+ph+16)+'" font-size="8.5" text-anchor="middle" fill="#5c6a82">← por debajo del promedio nacional · por encima →</text>';
+  s+='<text transform="translate(10 '+(t+ph/2)+') rotate(-90)" font-size="8.5" text-anchor="middle" fill="#5c6a82">← pierde terreno · gana terreno desde '+D.y0+' →</text>';
+  return s+'</svg>';
+}
+function fxLadder(dn,y1,fs){
+  var arr=DEPTS.map(function(x){return {n:x.departamento,s:x['idc_'+y1],r:fxRkY(x.departamento,'idc',y1)};}).filter(function(x){return typeof x.s==='number';}).sort(function(a,b){return b.s-a.s;});
+  var i=arr.findIndex(function(x){return x.n===dn;});if(i<0)return '';
+  var a=Math.max(0,Math.min(i-3,arr.length-7)),rows=arr.slice(a,a+7),me=arr[i];
+  var pad=fs>10?'4px 6px':'2px 4px';
+  var tr=rows.map(function(x){var cur=x.n===dn,dif=x.s-me.s;
+    return '<tr'+(cur?' style="background:#e6efff;font-weight:800"':'')+'><td style="padding:'+pad+';text-align:right;color:#5c6a82">'+(x.r==null?'':x.r+'°')+'</td><td style="padding:'+pad+';text-align:left">'+x.n+'</td><td style="padding:'+pad+';width:36%"><div style="height:'+(fs-1)+'px;background:#eef2f8;border-radius:2px"><div style="height:100%;width:'+Math.max(2,x.s/10*100)+'%;background:'+(cur?'#0046b1':'#9fb3d1')+';border-radius:2px"></div></div></td><td style="padding:'+pad+';text-align:right">'+fxF(x.s,2)+'</td><td style="padding:'+pad+';text-align:right;color:'+(cur?'#5c6a82':(dif>0?'#b10b4f':'#0e7c66'))+'">'+(cur?'este':(dif>0?'+':'−')+fxF(Math.abs(dif),2))+'</td></tr>';}).join('');
+  var msg=i===0?'Es el primer lugar del país.':'Para subir al puesto '+(arr[i-1].r==null?i:arr[i-1].r)+'° necesita <b>+'+fxF(arr[i-1].s-me.s,2)+' puntos</b>.'+(i<arr.length-1?' Le lleva '+fxF(me.s-arr[i+1].s,2)+' puntos al de abajo.':'');
+  return '<table style="border-collapse:collapse;width:100%;font-size:'+fs+'px">'+tr+'</table><div style="font-size:'+fs+'px;margin-top:3px">'+msg+'</div>';
+}
+function fxLeaderTbl(D,dn,n,fs){
+  var mat=(EX.indicadores||{}).matrix||{},pad=fs>10?'4px 6px':'2px 4px',bd='border-bottom:1px solid #e6ecf5';
+  var rows=D.inds.map(function(x){var best=-1,bn=null;DEPTS.forEach(function(q){var v=(mat[q.departamento]||{})[x.code];if(typeof v==='number'&&v>best){best=v;bn=q.departamento;}});
+    var rv=bn?rawFor(bn,x.code):null;return {nm:x.nm,pil:x.pil,u:x.u,raw:x.raw,v:x.v,ln:bn,lraw:rv?rv[rv.length-1]:null,gl:best-x.v};}).filter(function(x){return x.ln&&x.ln!==dn&&x.gl>0;}).sort(function(a,b){return b.gl-a.gl;}).slice(0,n);
+  if(!rows.length)return '';
+  var dv=function(raw,u,pt){return raw!=null?rawFmt(raw)+u:'puntaje '+fxF(pt,1);};
+  var th=function(t,l){return '<th style="text-align:'+(l?'left':'center')+';padding:'+pad+';border-bottom:2px solid #cfd8e3;font-size:'+(fs-1)+'px;text-transform:uppercase;color:#5c6a82">'+t+'</th>';};
+  var sm='color:#5c6a82;font-size:'+(fs-1)+'px';
+  return '<table style="border-collapse:collapse;width:100%;font-size:'+fs+'px"><thead><tr>'+th('Indicador',1)+th('Su dato')+th('Mejor del país')+th('Distancia al mejor')+'</tr></thead><tbody>'+
+    rows.map(function(x){return '<tr><td style="padding:'+pad+';'+bd+';text-align:left"><b>'+x.nm+'</b><br><span style="'+sm+'">'+x.pil+'</span></td><td style="padding:'+pad+';'+bd+';text-align:center">'+dv(x.raw,x.u,x.v)+'</td><td style="padding:'+pad+';'+bd+';text-align:center">'+dv(x.lraw,x.u,10)+'<br><span style="'+sm+'">'+x.ln+'</span></td><td style="padding:'+pad+';'+bd+';width:26%"><div style="height:'+(fs-1)+'px;background:#eef2f8;border-radius:2px"><div style="height:100%;width:'+Math.min(100,x.gl*10)+'%;background:#b10b4f;border-radius:2px"></div></div><div style="text-align:right;'+sm+'">'+fxF(x.gl,1)+' de 10 puntos</div></td></tr>';}).join('')+'</tbody></table>';
+}
 function fxPages(dn){
   var D=fxData(dn),d=D.d,y0=D.y0,y1=D.y1,N=D.N,im=FXIMG[dn]||{};
   var s1=d['idc_'+y1],s0=d['idc_'+y0],a1=fxAvgY('idc',y1),r1=fxRkY(dn,'idc',y1),r0=fxRkY(dn,'idc',y0);
@@ -2627,7 +2711,7 @@ function fxPages(dn){
   var chgSorted=D.inds.filter(function(x){return x.chg!=null;}).sort(function(a,b){return b.chg-a.chg;});
   var cup=chgSorted.filter(function(x){return x.chg>0;}).slice(0,5),cdn=chgSorted.filter(function(x){return x.chg<0;}).slice(-5).reverse();
   var tercio=r1==null?'':(r1<=N/3?'tercio superior':(r1<=2*N/3?'tercio medio':'tercio inferior'));
-  var trend=(D.multi&&s0!=null)?' Desde '+y0+' su puntaje pasó de '+fxF(s0)+' a '+fxF(s1)+' ('+(s1-s0>=0?'+':'')+fxF(s1-s0)+') y su posición '+(dr==null?'':(dr>0?'mejoró '+dr+' puesto'+(dr>1?'s':''):(dr<0?'cayó '+(-dr)+' puesto'+(dr<-1?'s':''):'se mantuvo')))+(r0!=null?' (del '+r0+' al '+r1+')':'')+'.':'';
+  var trend=(D.multi&&dr!=null)?' Desde '+y0+' '+(dr>0?'subió '+dr+' puesto'+(dr>1?'s':''):(dr<0?'bajó '+(-dr)+' puesto'+(dr<-1?'s':''):'mantuvo su puesto'))+(dr!==0?' (del '+r0+'° al '+r1+'°)':'')+'.':'';
   var wk=worst;var wkInds=D.inds.filter(function(x){return x.pk===wk.key&&x.gapc!=null;}).sort(function(a,b){return a.gapc-b.gapc;}).slice(0,3);
   var stI=D.inds.filter(function(x){return x.pk===best.key&&x.gapc!=null;}).sort(function(a,b){return b.gapc-a.gapc;}).slice(0,2);
   var lead=D.pil.map(function(p){var m=fxMaxY(p.key,y1);return {n:p.n,dist:m==null?null:m-p.s1};}).filter(function(x){return x.dist!=null;}).sort(function(a,b){return b.dist-a.dist;})[0];
@@ -2636,24 +2720,30 @@ function fxPages(dn){
   var head=function(kick){return '<div class="rpt-head"><div class="kick">'+kick+'</div><div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px"><h1>'+dn+'</h1><span class="chip" style="background:'+color(s1)+';color:'+inkOn(color(s1))+'">'+fxF(s1)+'</span></div></div>';};
   var tile=function(l,v,sub){return '<div class="c"><div class="l">'+l+'</div><div class="v">'+v+'</div><div style="font-size:8.5px;color:#5c6a82">'+sub+'</div></div>';};
   var FXCSS='<style>.fxp table{font-size:8.5px;margin-top:3px}.fxp td,.fxp th{padding:2px 5px}.fxp .indtbl td,.fxp .indtbl th{padding:1px 4px}.fxp .insight{padding:6px 9px;margin:6px 0;font-size:9.5px}.fxp .rpt-head{margin-bottom:8px;padding-bottom:5px}.fxp .ctx{margin:6px 0}.fxp .foot{margin-top:6px}.fxp .rpt-head h1{font-size:22px}</style>';
+  var insight='<div class="insight"><b>Lectura rápida.</b> <b>'+dn+'</b> ocupa el puesto <b>'+(r1==null?'–':r1)+' de '+N+'</b> en el '+IDX_ACR+' '+y1+(tercio?' ('+tercio+')':'')+', con '+fxF(s1,1)+' sobre 10'+(a1!=null?', '+fxF(Math.abs(s1-a1),1)+' '+(s1>=a1?'por encima':'por debajo')+' del promedio nacional':'')+'.'+trend+' Pilar más fuerte: <b>'+best.n+'</b>. Pilar más rezagado: <b>'+wk.n+'</b>.</div>';
   var p1=FXCSS+'<section class="dept fxp">'+head((d.region?d.region+' · ':'')+'Resumen ejecutivo · '+IDX_ACR+' '+y1)+
-    '<div class="ctx">'+tile('Posición',(r1==null?'–':r1+'° de '+N),(tercio||'')+(dr==null||!D.multi?'':' · '+(dr>0?'▲ +'+dr:(dr<0?'▼ '+dr:'='))+' desde '+y0))+
+    '<div class="ctx">'+tile('Posición',(r1==null?'–':r1+'° de '+N),(tercio||'')+(dr==null||!D.multi?'':' · '+(dr>0?'subió '+dr:(dr<0?'bajó '+(-dr):'igual'))+' desde '+y0))+
       tile('Puntaje (0–10)',fxF(s1),(D.multi&&s0!=null?(s1-s0>=0?'+':'')+fxF(s1-s0)+' desde '+y0:'año '+y1))+
       tile('vs promedio nacional',(a1!=null&&s1-a1>=0?'+':'')+fxF(a1==null?null:s1-a1),'promedio '+fxF(a1))+
       tile('Pilares sobre el promedio',above+' de '+D.pil.length,indN?indAbove+' de '+indN+' indicadores':'')+'</div>'+
-    '<div class="insight"><b>Lectura rápida.</b> '+dn+' ocupa la posición '+(r1==null?'–':r1)+' de '+N+' en el '+IDX_ACR+' '+y1+' con '+fxF(s1)+'/10, frente a un promedio nacional de '+fxF(a1)+'.'+trend+' Su pilar más fuerte frente al promedio es <b>'+best.n+'</b> ('+(best.gap>=0?'+':'')+fxF(best.gap)+') y el más rezagado es <b>'+wk.n+'</b> ('+fxF(wk.gap)+').</div>'+
-    '<div class="grid2"><div><h3 style="font-size:12px;margin-bottom:4px">Qué pilares jalan el puntaje (brecha vs promedio nacional)</h3>'+(im.gap?'<img class="chart" src="'+im.gap+'">':'')+'</div>'+
-      '<div><h3 style="font-size:12px;margin-bottom:2px">Pilares: '+(D.multi?y0+' → '+y1:y1)+'</h3><table><thead><tr><th class="l">Pilar</th><th>Puntaje</th><th>Puesto</th>'+(D.multi?'<th>Δ puesto</th>':'')+'</tr></thead><tbody>'+
-      byRank.map(function(p){return '<tr><td class="l">'+p.n+'</td><td class="mono" style="background:'+color(p.s1)+';color:'+inkOn(color(p.s1))+'">'+fxF(p.s1)+(D.multi&&p.ds!=null?' <span style="font-size:8px">('+(p.ds>=0?'+':'')+fxF(p.ds,1)+')</span>':'')+'</td><td class="mono">'+(p.r1==null?'–':p.r1+'°')+'</td>'+(D.multi?'<td class="mono" style="color:'+(p.dr==null||p.dr===0?'inherit':(p.dr>0?'#0e7c66':'#b10b4f'))+'">'+(p.dr==null?'–':(p.dr>0?'▲ '+p.dr:(p.dr<0?'▼ '+(-p.dr):'='))) +'</td>':'')+'</tr>';}).join('')+'</tbody></table></div></div>'+
-    '<h3 style="font-size:12px;margin:10px 0 3px">Qué indicadores jalan el puntaje frente al promedio nacional <span style="font-weight:400;color:#5c6a82;font-size:9px">(contribución aproximada a la brecha del puntaje general)</span></h3>'+
-    '<div class="grid2" style="font-size:9px"><div><div style="font-weight:800;color:#0e7c66;margin-bottom:2px">Jalan hacia arriba</div><ol style="margin:0;padding-left:15px">'+up.map(function(x){return fxLi(x,'gapc');}).join('')+'</ol></div><div><div style="font-weight:800;color:#b10b4f;margin-bottom:2px">Jalan hacia abajo</div><ol style="margin:0;padding-left:15px">'+down.map(function(x){return fxLi(x,'gapc');}).join('')+'</ol></div></div>'+
-    '<div class="insight" style="margin-top:10px"><b>Lectura para política pública.</b><ul style="margin:3px 0 0;padding-left:16px">'+
-      '<li><b>Prioridad:</b> '+wk.n+' (puesto '+(wk.r1==null?'–':wk.r1)+' de '+N+'; '+fxF(wk.gap)+' frente al promedio). '+(wkInds.length?'Los indicadores que más lo frenan son '+wkInds.map(function(x){return x.nm+' ('+fxF(x.v,1)+' vs '+fxF(x.a,1)+')';}).join('; ')+'.':'')+'</li>'+
+    insight+
+    '<h3 style="font-size:12px;margin:8px 0 3px">Pilares: '+(D.multi?y0+' → '+y1:y1)+'</h3>'+fxPilTable(D,9)+
+    (D.multi?'<h3 style="font-size:12px;margin:10px 0 2px">Cómo se movió cada pilar en el ranking</h3>'+fxSvgDumbbell(D):(im.gap?'<h3 style="font-size:12px;margin:10px 0 2px">Pilares frente al promedio nacional</h3><img class="chart" src="'+im.gap+'">':''))+
+    '<div class="foot">'+IDX_ACR+' · Colombia Compite &amp; Universidad del Rosario · Puesto: lugar entre los '+N+' '+IDX_MANY+' (1° = mejor). Puntaje: escala 0–10.</div></section>';
+  var lv=fxLeaderTbl(D,dn,7,8.5),lad=fxLadder(dn,y1,8.5),mx=D.multi?fxSvgMatrix(D,420,385):'';
+  var p3='<section class="dept fxp">'+head((d.region?d.region+' · ':'')+'Diagnóstico y prioridades · '+IDX_ACR+' '+y1)+
+    '<div class="grid2"><div><h3 style="font-size:12px;margin:0 0 3px">Dónde está frente a los demás</h3>'+lad+'</div>'+
+    '<div><h3 style="font-size:12px;margin:0 0 3px">Qué pilares ganan o pierden terreno</h3>'+(mx?mx+'<div style="font-size:8px;color:#5c6a82">Cada punto es un pilar. Ventaja = su puntaje menos el promedio nacional. Terreno = cuánto cambió su puntaje desde '+y0+', comparado con el cambio del promedio nacional.</div>':(im.gap?'<img class="chart" src="'+im.gap+'">':''))+'</div></div>'+
+    (lv?'<h3 style="font-size:12px;margin:10px 0 3px">Dónde está más lejos del mejor del país <span style="font-weight:400;color:#5c6a82;font-size:9px">(los 7 indicadores con mayor distancia)</span></h3>'+lv:'')+
+    '<h3 style="font-size:12px;margin:10px 0 3px">Qué indicadores jalan el puntaje frente al promedio nacional</h3>'+
+    '<div class="grid2" style="font-size:8.5px"><div><div style="font-weight:800;color:#0e7c66;margin-bottom:2px">Jalan hacia arriba</div><ol style="margin:0;padding-left:15px">'+up.slice(0,4).map(function(x){return fxLi(x,'gapc');}).join('')+'</ol></div><div><div style="font-weight:800;color:#b10b4f;margin-bottom:2px">Jalan hacia abajo</div><ol style="margin:0;padding-left:15px">'+down.slice(0,4).map(function(x){return fxLi(x,'gapc');}).join('')+'</ol></div></div>'+
+    '<div class="insight" style="margin-top:8px"><b>Lectura para política pública.</b><ul style="margin:3px 0 0;padding-left:16px">'+
+      '<li><b>Prioridad:</b> '+wk.n+' (puesto '+(wk.r1==null?'–':wk.r1)+' de '+N+'). '+(wkInds.length?'Lo frenan: '+wkInds.map(function(x){return x.nm;}).join('; ')+'.':'')+'</li>'+
       '<li><b>Fortaleza a capitalizar:</b> '+best.n+' (puesto '+(best.r1==null?'–':best.r1)+'). '+(stI.length?'Se apoya en '+stI.map(function(x){return x.nm;}).join(' y ')+'.':'')+'</li>'+
-      (lead?'<li><b>Mayor distancia al líder nacional:</b> '+lead.n+' ('+fxF(lead.dist,1)+' puntos por debajo del mejor del país).</li>':'')+
+      (lead?'<li><b>Mayor distancia al líder nacional:</b> '+lead.n+' ('+fxF(lead.dist,1)+' puntos por debajo del mejor).</li>':'')+
       (fall?'<li><b>Alerta:</b> '+fall.n+' perdió '+(-fall.dr)+' puesto'+(fall.dr<-1?'s':'')+' desde '+y0+'.</li>':'')+
       (rise?'<li><b>Avance a sostener:</b> '+rise.n+' ganó '+rise.dr+' puesto'+(rise.dr>1?'s':'')+' desde '+y0+'.</li>':'')+'</ul></div>'+
-    '<div class="foot">'+IDX_ACR+' · Colombia Compite &amp; Universidad del Rosario · Contribución aproximada = (puntaje − promedio nacional) ÷ (n.º de indicadores del pilar × n.º de pilares); supone ponderación uniforme y es una lectura descriptiva, no causal.</div></section>';
+    '<div class="foot">'+IDX_ACR+' · Colombia Compite &amp; Universidad del Rosario · Los indicadores que jalan se ordenan por contribución aproximada = (puntaje − promedio nacional) ÷ (n.º de indicadores del pilar × n.º de pilares); supone ponderación uniforme y es una lectura descriptiva, no causal.</div></section>';
   var yrs=D.yrs;
   var pr=D.pil.map(function(p){var o={};yrs.forEach(function(y){o[y]=score(d,p.key,y);});return {n:p.n,vals:o};});
   var rr=D.pil.map(function(p){var o={};yrs.forEach(function(y){o[y]=fxRkY(dn,p.key,y);});return {n:p.n,vals:o};});
@@ -2665,7 +2755,7 @@ function fxPages(dn){
     (D.multi?'<h3 style="font-size:12px;margin:10px 0 3px">Qué explica el cambio '+y0+' → '+y1+' <span style="font-weight:400;color:#5c6a82;font-size:9px">(contribución aproximada al cambio del puntaje general)</span></h3><div class="grid2" style="font-size:9px"><div><div style="font-weight:800;color:#0e7c66;margin-bottom:2px">Jalaron hacia arriba</div><ol style="margin:0;padding-left:15px">'+(cup.length?cup.map(function(x){return fxLi(x,'chg');}).join(''):'<li>Ninguno</li>')+'</ol></div><div><div style="font-weight:800;color:#b10b4f;margin-bottom:2px">Jalaron hacia abajo</div><ol style="margin:0;padding-left:15px">'+(cdn.length?cdn.map(function(x){return fxLi(x,'chg');}).join(''):'<li>Ninguno</li>')+'</ol></div></div>':'')+
     (D.multi?'<div class="insight" style="margin-top:8px"><b>Lectura histórica.</b> '+(bestYr&&D.multi?'Su mejor posición fue '+bestYr.r+'° ('+bestYr.y+') y la peor '+worstYr.r+'° ('+worstYr.y+'). ':'')+(D.multi&&s0!=null?'El puntaje general '+(s1>=s0?'subió':'bajó')+' '+fxF(Math.abs(s1-s0))+' puntos entre '+y0+' y '+y1+', mientras el promedio nacional pasó de '+fxF(fxAvgY('idc',y0))+' a '+fxF(a1)+'. ':'')+(rise?'Mayor mejora por pilar: '+rise.n+' (+'+rise.dr+' puestos). ':'')+(fall?'Mayor deterioro: '+fall.n+' ('+fall.dr+' puestos).':'')+'</div>':'')+
     '<div class="foot">Posición por pilar: verde = tercio superior, amarillo = tercio medio, rojo = tercio inferior. Años disponibles: '+yrs.join(', ')+'. La ficha de datos completa (indicadores y valores reales) sigue en las páginas siguientes.</div></section>';
-  return p1+p2;
+  return p1+p2+p3;
 }
 miniMapSVG=function(){return '';};
 var _dsh0=deptSectionHTML;
