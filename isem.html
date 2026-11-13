@@ -518,6 +518,15 @@ body{background-image:none}
 .trbox{position:relative;height:calc(100vh - 110px);min-height:560px}
 #trPick{max-height:92px;overflow:auto}
 .xview[data-x="graficas"]>.card>h3.sec{display:none}
+.gsub.on:has(>.pick){display:grid;grid-template-columns:minmax(0,1fr) 230px;grid-template-rows:auto auto 1fr;grid-template-areas:"c c" "k s" "k p";column-gap:14px;align-items:start}
+.gsub:has(>.pick)>.controls{grid-area:c}.gsub:has(>.pick)>.chartbox{grid-area:k;height:calc(100vh - 190px)!important;min-height:420px}
+.gsub:has(>.pick)>.pick-search{grid-area:s;margin:0 0 8px}
+.gsub:has(>.pick)>.pick{grid-area:p;flex-direction:column;flex-wrap:nowrap;gap:5px;max-height:calc(100vh - 250px)!important;overflow:auto;margin:0}
+.gsub:has(>.pick)>.pick label{width:100%;box-sizing:border-box}
+.pgrid{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:14px;align-items:start}
+.pgrid>.pside{order:2;position:sticky;top:70px}.pgrid>.pside .pick{flex-direction:column;flex-wrap:nowrap;gap:5px;max-height:calc(100vh - 150px)!important}
+.pgrid>.pside .pick label{width:100%;box-sizing:border-box}
+@media(max-width:900px){.gsub.on:has(>.pick),.pgrid{grid-template-columns:1fr}.gsub.on:has(>.pick){grid-template-areas:"c" "s" "p" "k";grid-template-rows:auto}.pgrid>.pside{order:0;position:static}.gsub:has(>.pick)>.pick{max-height:130px!important;flex-direction:row;flex-wrap:wrap}}
 details.fold{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:14px}
 details.fold>summary{cursor:pointer;padding:14px 18px;font-weight:700;color:var(--ink);list-style:none}
 details.fold>summary::-webkit-details-marker{display:none}
@@ -535,6 +544,7 @@ details.fold>.card{border:none;box-shadow:none;margin:0}
 .racerow{transition:none!important;will-change:auto}.siderank{max-height:none!important;overflow:visible!important}.cc-nav,.hero.intro{display:none!important}
 body.print-current #ranktitle{break-before:page;page-break-before:always}
 body.print-current .twocol .card,body.print-current .card:has(.siderank){break-inside:auto;page-break-inside:auto}details.fold:not([open])>*:not(summary){display:none}.xbarcard{display:none!important}}
+.gdet summary{cursor:pointer;font-weight:600}.gdet .gbody{font-weight:400;font-size:12.5px;line-height:1.5;margin:6px 0 4px;white-space:normal;max-width:640px}.gdet .gbody b{color:var(--muted);font-weight:600}.gdet .gbody p{margin:0 0 4px}
 </style>
 </head>
 <body>
@@ -874,11 +884,12 @@ body.print-current .twocol .card,body.print-current .card:has(.siderank){break-i
       </div>
       <div class="pick" id="fichaIndChips" style="margin-bottom:8px"></div>
       <div class="note" id="fichaSerNote" style="margin-bottom:10px"></div>
-      <div class="controls" style="margin-bottom:4px"><span class="note" id="fichaDeptLbl"></span></div>
-      <div class="pick" id="fichaEvoDepts" style="margin-bottom:10px"></div>
+      <div class="pgrid"><div class="pside"><div class="controls" style="margin-bottom:4px"><span class="note" id="fichaDeptLbl"></span></div>
+      <div class="pick" id="fichaEvoDepts" style="margin-bottom:10px"></div></div><div class="pmain">
       <div class="fxwrap"><h4 class="sec" style="margin:10px 0 4px">1. Posición</h4><div class="chartbox" style="height:300px"><canvas id="fichaChartRank"></canvas></div><div class="fxmsg note" style="display:none"></div></div>
       <div class="fxwrap"><h4 class="sec" style="margin:14px 0 4px">2. Puntaje</h4><div class="chartbox" style="height:300px"><canvas id="fichaIndChart"></canvas></div><div class="fxmsg note" style="display:none"></div></div>
       <div class="fxwrap"><h4 class="sec" style="margin:14px 0 4px">3. Dato duro</h4><div class="chartbox" style="height:300px"><canvas id="fichaChartRaw"></canvas></div><div class="fxmsg note" style="display:none"></div></div>
+      </div></div>
       <div id="fichaFoot"></div>
     </div>
   </section>
@@ -2106,13 +2117,14 @@ document.getElementById('fichaIndClear').onclick=()=>{fichaIndScope=['idc'];fich
 /* dirección de indicadores + guía + mapa por indicador */
 function indInversa(code){const di=((EX.indicadores||{}).dic||[]).find(x=>x.code===code);return di?!!di.inversa:null;}
 function dirText(code){const iv=indInversa(code);if(iv===null)return '';return iv?'Inverso (menos es mejor): cuanto MENOR es el valor real, MAYOR es el puntaje. 10 = el mejor del país.':'Directo (más es mejor): cuanto MAYOR es el valor real, MAYOR es el puntaje. 10 = el mejor del país.';}
-const _IY={};function indYears(code){if(_IY[code])return _IY[code];const ys=(EX.historico.years||[]).filter((y,i)=>Object.keys(EX.series||{}).some(t=>{const s=EX.series[t][code];return s&&s[i]!=null;}));let r='Sin datos';if(ys.length){const a=ys.map(Number),full=a.every((v,i)=>!i||v===a[i-1]+1);r=full?(a.length>1?ys[0]+'–'+ys[ys.length-1]:ys[0]):ys.join(', ');}return _IY[code]=r;}function buildGuia(){const host=document.getElementById('guiaTbl');if(!host)return;
+const _IY={};function indYears(code){if(_IY[code])return _IY[code];const ys=(EX.historico.years||[]).filter((y,i)=>Object.keys(EX.series||{}).some(t=>{const s=EX.series[t][code];return s&&s[i]!=null;}));let r='Sin datos';if(ys.length){const a=ys.map(Number),full=a.every((v,i)=>!i||v===a[i-1]+1);r=full?(a.length>1?ys[0]+'–'+ys[ys.length-1]:ys[0]):ys.join(', ');}return _IY[code]=r;}function GUIADET(d){const e=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');return '<details class="gdet"><summary>'+e(d.nombre)+'</summary><div class="gbody"><p>'+e(d.def)+'</p>'+(d.uni?'<div><b>Unidad:</b> '+e(d.uni)+'</div>':'')+(d.fte?'<div><b>Fuente:</b> '+e(d.fte)+'</div>':'')+(d.per?'<div><b>Periodicidad:</b> '+e(d.per)+'</div>':'')+(d.obj?'<div><b>Objetivo:</b> '+e(d.obj)+'</div>':'')+(d.enl?'<div><a href="'+e(d.enl)+'" target="_blank" rel="noopener">Ver fuente</a></div>':'')+'</div></details>';}
+function buildGuia(){const host=document.getElementById('guiaTbl');if(!host)return;
   const q=(document.getElementById('guiaq').value||'').toLowerCase(),dir=document.getElementById('guiaDir').value;
   const pil={};PILLARS.forEach(p=>pil[p.key]=p.nombre);
-  const rows=(EX.indicadores.dic||[]).filter(d=>(!q||(d.nombre+' '+(pil[d.pilar]||'')).toLowerCase().includes(q))&&(!dir||(dir==='inverso'?d.inversa:!d.inversa)));
+  const rows=(EX.indicadores.dic||[]).filter(d=>(!q||(d.nombre+' '+(pil[d.pilar]||'')+' '+(d.def||'')).toLowerCase().includes(q))&&(!dir||(dir==='inverso'?d.inversa:!d.inversa)));
   let hh='<thead><tr><th class="depth">Indicador</th><th>Pilar</th><th>Dirección</th><th>Años</th></tr></thead><tbody>';
   rows.forEach(d=>{const b=d.inversa?'<span style="color:#FA7E60;font-weight:700">Inverso ↓</span>':'<span style="color:#0e7c66;font-weight:700">Directo ↑</span>';
-    hh+='<tr><td class="dept">'+d.nombre+'</td><td style="font-size:12px;color:var(--muted)">'+(pil[d.pilar]||'')+'</td><td>'+b+'</td><td style="font-size:12px;color:var(--muted)">'+indYears(d.code)+'</td></tr>';});
+    hh+='<tr><td class="dept">'+(d.def?GUIADET(d):d.nombre)+'</td><td style="font-size:12px;color:var(--muted)">'+(pil[d.pilar]||'')+'</td><td>'+b+'</td><td style="font-size:12px;color:var(--muted)">'+indYears(d.code)+'</td></tr>';});
   host.innerHTML=hh+'</tbody>';const c=document.getElementById('guiaCount');if(c)c.textContent=rows.length+' indicadores';}
 (function(){const q=document.getElementById('guiaq'),ds=document.getElementById('guiaDir');if(q)q.oninput=buildGuia;if(ds)ds.onchange=buildGuia;})();
 document.getElementById('mapmetric').innerHTML='<option value="idc">ISEM general</option>'+PILLARS.map(p=>'<optgroup label="'+p.nombre+'"><option value="'+p.key+'">'+p.nombre+' (pilar)</option>'+(EX.indicadores.dic||[]).filter(d=>d.pilar===p.key).map(di=>'<option value="'+di.code+'">'+di.nombre+'</option>').join('')+'</optgroup>').join('');
@@ -2499,7 +2511,7 @@ function fxDraw(id,kind,items,title){
 }
 function fxDefs(items){
   var host=document.getElementById('fichaFoot');if(!host)return;
-  var dic=(EX.indicadores||{}).dic||[],seen={},rows=[],n=0,N=DEPTS.length;
+  var dic=(EX.indicadores||{}).dic||[],seen={},rows=[],n=0,N=DEPTS.length,official=0,draft=0;
   var plab={};PILLARS.forEach(function(p){plab[p.key]=p.nombre;});
   items.forEach(function(it){
     var code=it.code;if(seen[code])return;seen[code]=1;n++;
@@ -2507,12 +2519,14 @@ function fxDefs(items){
     if(code==='idc')t='<b>'+IDX_ACR+' general.</b> Puntaje compuesto (0–10) que resume todos los pilares del índice; 10 corresponde al mejor desempeño del país. La posición ordena a los '+N+' '+IDX_MANY+' de mayor a menor puntaje.';
     else if(p){var k=dic.filter(function(x){return x.pilar===code;}).length;t='<b>Pilar «'+p.nombre+'».</b> Puntaje (0–10) que agrega '+k+' indicadores del pilar; 10 = mejor desempeño del país.';}
     else if(sp)t='<b>Subpilar «'+sp.nombre+'»</b> del pilar «'+(plab[sp.pilar]||'')+'». Puntaje (0–10) que promedia los indicadores del subpilar.';
-    else if(di){var u=di.unidad,nm=di.nombre.charAt(0).toLowerCase()+di.nombre.slice(1);
+    else if(di&&di.def){official++;
+      t='<b>'+di.nombre+'</b> ('+di.code+'). '+di.def+' <i>Unidad:</i> '+di.uni+'. <i>Fuente:</i> '+di.fte+'. <i>Periodicidad:</i> '+di.per.toLowerCase()+'. '+(di.obj?'<i>Objetivo:</i> '+di.obj+(/[.!?]$/.test(di.obj)?'':'.')+' ':'')+(di.inversa?'Indicador <i>inverso</i> (a menor valor, mejor desempeño).':'Indicador <i>directo</i> (a mayor valor, mejor desempeño).');}
+    else if(di){draft++;var u=di.unidad,nm=di.nombre.charAt(0).toLowerCase()+di.nombre.slice(1);
       t='<b>'+di.nombre+'</b> ('+di.code+'). Mide '+nm+', dentro del pilar «'+(plab[di.pilar]||'')+'»'+(u?', expresado en '+u:'')+'. '+(di.inversa?'Es un indicador <i>inverso</i>: a menor valor, mejor desempeño.':'Es un indicador <i>directo</i>: a mayor valor, mejor desempeño.')+' El puntaje (0–10) normaliza el dato duro entre el peor y el mejor de los '+N+' '+IDX_MANY+'; la posición los ordena de 1 (mejor) a '+N+'.'+(di.corte?' Cobertura: '+di.corte+'.':'');}
     else t='<b>'+fichaIndLabel(code)+'.</b>';
     rows.push('<div style="margin:0 0 6px"><sup>'+n+'</sup> '+t+'</div>');
   });
-  host.innerHTML='<div style="border-top:1px solid #cfd8e3;margin-top:14px;padding-top:8px;font-size:12px;color:#4B5B66"><b>Notas al pie · definiciones</b> <span style="font-style:italic">(borrador redactado a partir del nombre, la unidad y la dirección de cada indicador; pendiente de contrastar con la ficha técnica oficial)</span>'+rows.join('')+'</div>';
+  host.innerHTML='<div style="border-top:1px solid #cfd8e3;margin-top:14px;padding-top:8px;font-size:12px;color:#4B5B66"><b>Notas al pie · definiciones</b> '+(draft?'<span style="font-style:italic">(borrador redactado a partir del nombre, la unidad y la dirección de cada indicador; pendiente de contrastar con la ficha técnica oficial)</span>':(official?'<span style="font-style:italic">(fichas técnicas oficiales 2026)</span>':''))+rows.join('')+'</div>';
 }
 function drawFichaSeries(){
   var items=fxItems();if(!items.length)return;
