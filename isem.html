@@ -512,6 +512,12 @@ body{background-image:none}
 .xchip.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
 .xview{display:none}.xview.on{display:block}
 #gModeBar{display:none!important}
+.trmode{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.trmode button{font:inherit;font-size:13px;font-weight:600;padding:6px 14px;border:0;background:var(--card);color:var(--ink);cursor:pointer}
+.trmode button.on{background:var(--ink);color:var(--card)}
+.trbox{position:relative;height:calc(100vh - 110px);min-height:560px}
+#trPick{max-height:92px;overflow:auto}
+.xview[data-x="graficas"]>.card>h3.sec{display:none}
 details.fold{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:14px}
 details.fold>summary{cursor:pointer;padding:14px 18px;font-weight:700;color:var(--ink);list-style:none}
 details.fold>summary::-webkit-details-marker{display:none}
@@ -618,7 +624,7 @@ body.print-current .twocol .card,body.print-current .card:has(.siderank){break-i
   </details></section>
 
   <!-- EXPLORAR -->
-  <section class="panel" data-panel="explorar"><div class="card xbarcard"><div class="xbar" id="xBar" role="group" aria-label="Vistas de exploración"><button type="button" class="xchip" data-xv="comparar">Comparar</button><button type="button" class="xchip" data-xv="dispersion">Dispersión</button><button type="button" class="xchip" data-xv="regiones">Regiones</button><button type="button" class="xchip" data-xv="grupos">Grupos</button><button type="button" class="xchip" data-xv="cifras">Cifras reales</button></div></div><div class="xview" data-x="comparar">
+  <section class="panel" data-panel="explorar"><div class="card xbarcard"><div class="xbar" id="xBar" role="group" aria-label="Vistas de exploración"><button type="button" class="xchip" data-xv="grupos">Grupos</button></div></div><div class="xview" data-x="comparar">
     <div class="card"><h3 class="sec">Comparar ciudades</h3>
       <div class="controls"><label class="ctl">Indicador <select id="cmpMetric"></select></label>
         <button class="btn" id="cmpClear">Limpiar selección</button><span class="note">Elige hasta 5 ciudades:</span></div>
@@ -752,11 +758,11 @@ body.print-current .twocol .card,body.print-current .card:has(.siderank){break-i
         <div class="chartbox" style="height:480px"><canvas id="evCanvas"></canvas></div>
       </div>
       <div class="gsub" data-sub="trayectoria">
-        <div class="controls"><label class="ctl">Indicador <select id="trMetric"></select></label>
+        <div class="controls"><div class="trmode" id="trMode" role="group" aria-label="Qué trayectoria ver"><button type="button" class="on" data-tm="pos">Posición</button><button type="button" data-tm="score">Puntaje</button><button type="button" data-tm="real">Cifra real</button></div><label class="ctl">Indicador <select id="trMetric"></select></label>
           <button class="btn" id="trAll">Seleccionar todos</button><button class="btn" id="trClear">Limpiar</button><button class="btn" id="btnTrPng">Descargar imagen</button>
           <span class="note">Posición en el ranking por año (1 = mejor). El eje se ajusta a las ciudades elegidos.</span></div>
         <div class="pick" id="trPick"></div>
-        <div class="chartbox" style="height:480px"><canvas id="trCanvas"></canvas></div>
+        <div class="chartbox trbox"><canvas id="trCanvas"></canvas></div>
       </div>
       <div class="gsub" data-sub="cambios">
         <div class="controls">
@@ -1199,9 +1205,38 @@ function setTab0(name){curTab=name;
   updateHash();
   if(appReady)scrollToContent();}
 
-let curX='comparar';
+let curX='trayectoria';
 const XV_OF={trayectoria:'graficas',cambios:'graficas'};
-const LEGACY={ranking:['resumen'],mapa:['resumen'],practicas:['resumen'],cifras:['explorar','cifras'],comparar:['explorar','comparar'],dispersion:['explorar','dispersion'],regiones:['explorar','regiones'],graficas:['explorar','trayectoria']};
+const LEGACY={ranking:['resumen'],mapa:['resumen'],practicas:['resumen'],cifras:['explorar','trayectoria'],comparar:['explorar','trayectoria'],dispersion:['explorar','trayectoria'],regiones:['explorar','grupos'],graficas:['explorar','trayectoria']};
+let trMode='pos';
+const TR_MODES={pos:'posición',score:'puntaje',real:'cifra real'};
+function trSync(){document.querySelectorAll('#trMode button').forEach(b=>b.classList.toggle('on',b.dataset.tm===trMode));
+  const sel=document.getElementById('trMetric');if(!sel)return;
+  [...sel.options].forEach(o=>{if(trMode==='real'&&!isIndCode(o.value)){o.disabled=true;o.dataset.trd='1';}else if(o.dataset.trd){o.disabled=false;delete o.dataset.trd;}});
+  if(trMode==='real'&&!isIndCode(sel.value)){const f=[...sel.options].find(o=>!o.disabled&&o.value);if(f)sel.value=f.value;}
+  const n=document.querySelector('[data-sub="trayectoria"] .controls .note');
+  if(n)n.textContent=trMode==='pos'?'Posición en el ranking por año (1 = mejor).':trMode==='score'?'Puntaje 0–10 por año (más alto = mejor).':'Cifra real del indicador por año, en su unidad.';}
+trRender=function(){trSync();const k=document.getElementById('trMetric').value||'idc',m=trMode,many=trPicked.length>12,N=DEPTS.length;
+  const TRPAL=['#253440','#FF3333','#FAA300','#3780FA','#FA7E60','#5A8FFA','#CBAA81','#FAD60E','#4B5B66','#C5BFAA'];
+  const num=v=>(v==null||isNaN(v))?null:+v;
+  const val=(dn,y)=>{if(m==='pos'){const h=(EX.historico.data[dn]||{})[k]||{};return num(h[y]);}if(m==='score')return num(score(byName[dn],k,y));return num(rawAt(dn,k,y));};
+  const rf=v=>typeof rawFmt==='function'?rawFmt(v):fmt(v);
+  const ds=trPicked.map((dn,i)=>({label:dn,data:HYEARS.map(y=>val(dn,y)),borderColor:dkc(TRPAL[i%TRPAL.length]),backgroundColor:dkc(TRPAL[i%TRPAL.length]),borderDash:LDASH[Math.floor(i/10)%3],borderWidth:many?1.8:3,pointRadius:many?0:4,pointHoverRadius:6,spanGaps:true,tension:.2,clip:false}));
+  const vals=[];ds.forEach(d=>d.data.forEach(v=>{if(v!=null)vals.push(v);}));
+  const lo=vals.length?Math.min(...vals):0,hi=vals.length?Math.max(...vals):1;let y;
+  if(m==='pos'){let a=Math.max(1,lo-1),b=Math.min(N,hi+1);if(b-a<3)b=Math.min(N,a+3);const r=b-a;y={reverse:true,min:a,max:b,title:{display:true,text:'Posición · '+metricLabel(k)+' (1 = mejor)'},ticks:{stepSize:r<=8?1:r<=16?2:4,precision:0,callback:v=>v+'°'}};}
+  else if(m==='score'){const p=(hi-lo)*.15||.5;y={min:Math.max(0,+(lo-p).toFixed(2)),max:Math.min(10,+(hi+p).toFixed(2)),title:{display:true,text:'Puntaje 0–10 · '+metricLabel(k)},ticks:{callback:v=>fmt(v)}};}
+  else{const p=(hi-lo)*.15||Math.abs(hi)*.1||1;y={min:+(lo-p).toFixed(4),max:+(hi+p).toFixed(4),title:{display:true,text:'Cifra real · '+indFull(k)},ticks:{callback:v=>rf(v)}};}
+  const endLbl={id:'endLbl',afterDatasetsDraw(ch){if(many)return;const c=ch.ctx,it=[];
+    ch.data.datasets.forEach((d,i)=>{const mt=ch.getDatasetMeta(i);if(mt.hidden)return;let j=d.data.length-1;while(j>=0&&d.data[j]==null)j--;if(j<0)return;const pt=mt.data[j];it.push({y:pt.y,x:pt.x,t:d.label.length>20?d.label.slice(0,19)+'…':d.label,c:d.borderColor});});
+    it.sort((a,b)=>a.y-b.y);for(let q=1;q<it.length;q++)if(it[q].y-it[q-1].y<13)it[q].y=it[q-1].y+13;
+    c.save();c.font='600 11px system-ui,sans-serif';c.textBaseline='middle';it.forEach(o=>{c.fillStyle=o.c;c.fillText(o.t,o.x+9,o.y);});c.restore();}};
+  const cfg={type:'line',data:{labels:HYEARS,datasets:ds},plugins:[endLbl],options:{responsive:true,maintainAspectRatio:false,layout:{padding:{right:many?10:130,top:8}},interaction:{mode:many?'nearest':'index',intersect:false},scales:{y:y,x:{ticks:{font:{size:12}}}},
+    plugins:{legend:{display:!many,position:'bottom',labels:{boxWidth:30,usePointStyle:true,pointStyle:'line',font:{size:11},generateLabels:LEGGEN}},
+      tooltip:{callbacks:{label:it=>it.dataset.label+': '+(it.raw==null?'s/d':m==='pos'?it.raw+'°':m==='score'?fmt(it.raw):rf(it.raw)+um(k))}}}}};
+  if(trChart)trChart.destroy();trChart=new Chart(document.getElementById('trCanvas'),cfg);};
+document.querySelectorAll('#trMode button').forEach(b=>b.onclick=()=>{trMode=b.dataset.tm;trRender();});
+document.getElementById('trMetric').onchange=trRender;
 function xShow(){document.querySelectorAll('#xBar .xchip').forEach(b=>b.classList.toggle('on',b.dataset.xv===curX));
   const v=XV_OF[curX]||curX;document.querySelectorAll('.xview').forEach(x=>x.classList.toggle('on',x.dataset.x===v));}
 function xRender(){const v=curX;
@@ -1222,7 +1257,7 @@ function scrollToContent(){const t=document.getElementById('tabs');if(!t)return;
   const y=t.getBoundingClientRect().top+window.pageYOffset;
   window.scrollTo({top:Math.max(0,y),behavior:prefersReduced?'auto':'smooth'});}
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>setTab(t.dataset.tab));
-const SECTIONS=[{id:'resumen',name:'Resumen',desc:'Mapa, ranking y cambios',c:'#253440'},{id:'explorar',name:'Explorar',desc:'Comparar, dispersión, regiones, grupos y más',c:'#3780FA'},{id:'ficha',name:'Perfil',desc:'Perfil completo y PDF del territorio',c:'#FAA300'},{id:'metodologia',name:'Metodología',desc:'Qué es el índice y fuentes',c:'#4B5B66'}];
+const SECTIONS=[{id:'resumen',name:'Resumen',desc:'Mapa, ranking y cambios',c:'#253440'},{id:'explorar',name:'Explorar',desc:'Trayectoria, grupos y ranking por año',c:'#3780FA'},{id:'ficha',name:'Perfil',desc:'Perfil completo y PDF del territorio',c:'#FAA300'},{id:'metodologia',name:'Metodología',desc:'Qué es el índice y fuentes',c:'#4B5B66'}];
 const ixp=document.getElementById('indexPanel');
 ixp.innerHTML=SECTIONS.map(s=>`<div class="ixitem" data-id="${s.id}" role="menuitem" tabindex="0"><span class="ixdot" style="background:${s.c}"></span><div><div class="nm">${s.name}</div><div class="ds">${s.desc}</div></div></div>`).join('');
 const btnIndex=document.getElementById('btnIndex');
