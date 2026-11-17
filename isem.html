@@ -1030,7 +1030,21 @@ function exportCanvas(id,name,titleOverride,subtitleOverride){
   const subY=kickY+ (subtitle?0:0);
   const headH=rule+padTop+ (title?26*S:0) + 20*S + (subtitle?18*S:0);
   const footH=50*S;
-  const W=cw+padX*2, H=headH+ch+footH;
+  const _lgl=[];let lgH=0;
+  try{
+    const _mg=document.createElement('canvas').getContext('2d');const fs=11.5*S,lh=15*S,maxW=cw;
+    const ax=[];const sc=inst&&inst.options&&inst.options.scales||{};
+    Object.keys(sc).forEach(k=>{const t=sc[k]&&sc[k].title&&sc[k].title.display&&sc[k].title.text;if(t)ax.push((k==='x'?'Eje horizontal: ':'Eje vertical: ')+(Array.isArray(t)?t.join(' '):t));});
+    let m=null,n=c;for(let i=0;i<5&&n&&!m;i++){const s=n.nextElementSibling;if(s&&s.classList&&s.classList.contains('metabox'))m=s;n=n.parentNode;}
+    let body='';
+    if(m&&m.style.display!=='none'){const ta=document.createElement('textarea');ta.innerHTML=m.innerHTML.replace(/<h5>.*?<\/h5>/,'').replace(/<div[^>]*>/g,'\n').replace(/<[^>]+>/g,'').replace(/Ver fuente/g,'');body=ta.value.trim();}
+    else if(typeof fxMetaBody==='function'&&(id==='fichaIndChart'||id==='fichaIndComp')){const sel=document.getElementById('fichaIndSel');const ta=document.createElement('textarea');ta.innerHTML=fxMetaBody(sel&&sel.value||'idc').replace(/<div[^>]*>/g,'\n').replace(/<[^>]+>/g,'').replace(/Ver fuente/g,'');body=ta.value.trim();}
+    const paras=[];if(ax.length)paras.push(ax.join('  ·  '));body.split('\n').forEach(p=>{p=p.trim();if(p)paras.push(p);});
+    _mg.font='500 '+fs+'px Barlow, sans-serif';
+    paras.forEach((p,pi)=>{const w=p.split(/\s+/);let cur='';w.forEach(x=>{const t=cur?cur+' '+x:x;if(_mg.measureText(t).width>maxW&&cur){_lgl.push({t:cur,b:pi===0&&ax.length>0});cur=x;}else cur=t;});if(cur)_lgl.push({t:cur,b:pi===0&&ax.length>0});});
+    if(_lgl.length)lgH=_lgl.length*lh+22*S;
+  }catch(e){}
+  const W=cw+padX*2, H=headH+ch+lgH+footH;
   const out=document.createElement('canvas');out.width=W;out.height=H;
   const g=out.getContext('2d');
   g.fillStyle='#ffffff';g.fillRect(0,0,W,H);
@@ -1042,8 +1056,8 @@ function exportCanvas(id,name,titleOverride,subtitleOverride){
   const usableW=W-padX*2;
   const fitFont=(txt,base,prefix,fam)=>{let fs=base;const set=s=>g.font=`${prefix}${s}px ${fam}`;set(fs);while(g.measureText(txt).width>usableW&&fs>8*S){fs-=S;set(fs);}return fs;};
   // kicker
-  g.fillStyle='#253440';fitFont('ÍNDICE DEPARTAMENTAL DE COMPETITIVIDAD · ISEM 2025',11*S,'600 ','Figtree, system-ui, sans-serif');
-  g.fillText('ÍNDICE DEPARTAMENTAL DE COMPETITIVIDAD · ISEM 2025',padX,padTop+rule);
+  g.fillStyle='#253440';fitFont('ÍNDICE SUBNACIONAL DE EMPRENDIMIENTO · ISEM 2025',11*S,'600 ','Figtree, system-ui, sans-serif');
+  g.fillText('ÍNDICE SUBNACIONAL DE EMPRENDIMIENTO · ISEM 2025',padX,padTop+rule);
   // título
   g.fillStyle='#253440';fitFont(title,22*S,'800 ','"Figtree Semi Condensed", Figtree, sans-serif');
   g.fillText(title,padX,padTop+rule+16*S);
@@ -1053,14 +1067,15 @@ function exportCanvas(id,name,titleOverride,subtitleOverride){
   g.drawImage(c,padX,headH,cw,ch);
   // restaurar el gráfico en pantalla (leyenda/animación originales)
   if(inst){try{if(_lg&&inst.options.plugins&&inst.options.plugins.legend){inst.options.plugins.legend.display=_lg.display;inst.options.plugins.legend.position=_lg.position;}if(_anim!==null)inst.options.animation=_anim;inst.update('none');}catch(e){}}
+  if(_lgl.length){const ly=headH+ch+8*S;g.fillStyle='#f4f7fb';g.fillRect(padX,ly,cw,lgH-8*S);g.textBaseline='top';_lgl.forEach((l,i)=>{g.font=(l.b?'700 ':'500 ')+11.5*S+'px Barlow, sans-serif';g.fillStyle=l.b?'#02285e':'#33415c';g.fillText(l.t,padX+6*S,ly+7*S+i*15*S);});}
   // pie
   let fecha;try{fecha=new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'});}catch(e){fecha=new Date().toLocaleDateString();}
-  g.fillStyle='#ECEEF0';g.fillRect(padX,headH+ch+10*S,W-padX*2,Math.max(1,S));
+  g.fillStyle='#ECEEF0';g.fillRect(padX,headH+ch+lgH+10*S,W-padX*2,Math.max(1,S));
   const copy='© 2025 Colombia Compite y Universidad del Rosario · Todos los derechos reservados';
   g.fillStyle='#4B5B66';fitFont(copy,11*S,'','Figtree, sans-serif');
-  g.fillText(copy,padX,headH+ch+18*S);
+  g.fillText(copy,padX,headH+ch+lgH+18*S);
   g.fillStyle='#8895ae';g.font=`${10.5*S}px Figtree, sans-serif`;
-  g.fillText('Fuente: compite.com.co · Exportado el '+fecha,padX,headH+ch+34*S);
+  g.fillText('Fuente: compite.com.co · Exportado el '+fecha,padX,headH+ch+lgH+34*S);
   const a=document.createElement('a');a.href=out.toDataURL('image/png');a.download=ACRL+'_'+name+'.png';a.click();
 }
 /* ---- exportar mapas (departamental y de clusters) a PNG con título, leyenda y derechos de autor ---- */
@@ -1133,8 +1148,8 @@ async function exportMapPng(kind){
   g.textBaseline='top';
   const usableW=W-padX*2;
   const fitFont=(txt,base,prefix,fam)=>{let fs=base;const set=s=>g.font=`${prefix}${s}px ${fam}`;set(fs);while(g.measureText(txt).width>usableW&&fs>8*S){fs-=S;set(fs);}return fs;};
-  g.fillStyle='#253440';fitFont('ÍNDICE DEPARTAMENTAL DE COMPETITIVIDAD · ISEM 2025',11*S,'600 ','Figtree, system-ui, sans-serif');
-  g.fillText('ÍNDICE DEPARTAMENTAL DE COMPETITIVIDAD · ISEM 2025',padX,padTop+rule);
+  g.fillStyle='#253440';fitFont('ÍNDICE SUBNACIONAL DE EMPRENDIMIENTO · ISEM 2025',11*S,'600 ','Figtree, system-ui, sans-serif');
+  g.fillText('ÍNDICE SUBNACIONAL DE EMPRENDIMIENTO · ISEM 2025',padX,padTop+rule);
   g.fillStyle='#253440';fitFont(title,22*S,'800 ','"Figtree Semi Condensed", Figtree, sans-serif');
   g.fillText(title,padX,padTop+rule+16*S);
   if(subtitle){g.fillStyle='#4B5B66';fitFont(subtitle,12.5*S,'','Figtree, sans-serif');g.fillText(subtitle,padX,padTop+rule+16*S+26*S);}
@@ -1779,7 +1794,7 @@ function vidChrome(g,W,H,S,title,subtitle,yearTxt){
   g.fillStyle=grd;g.fillRect(0,0,W,6*S);
   const padX=26*S;
   g.fillStyle='#253440';g.font='600 '+(11*S)+'px Figtree, system-ui, sans-serif';
-  g.fillText('ÍNDICE DEPARTAMENTAL DE COMPETITIVIDAD · ISEM 2025',padX,6*S+16*S);
+  g.fillText('ÍNDICE SUBNACIONAL DE EMPRENDIMIENTO · ISEM 2025',padX,6*S+16*S);
   g.fillStyle='#253440';g.font='800 '+(22*S)+'px "Figtree Semi Condensed", Figtree, sans-serif';
   g.fillText(title,padX,6*S+32*S);
   if(subtitle){g.fillStyle='#4B5B66';g.font=(12.5*S)+'px Figtree, sans-serif';g.fillText(subtitle,padX,6*S+60*S);}
